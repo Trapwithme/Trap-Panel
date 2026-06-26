@@ -215,7 +215,6 @@ namespace WpfApp
         private async Task HandleClientConnection(TcpClient tcpClient, string remoteIp, CancellationToken ct)
         {
             Stream stream = null;
-            SslStream sslStream = null;
             ClientConnection connection = null;
             string machineId = null;
             string clientInfo = null;
@@ -224,17 +223,36 @@ namespace WpfApp
             try
             {
                 var netStream = tcpClient.GetStream();
-                sslStream = new SslStream(netStream, false, (sender, certificate, chain, errors) => true);
-                await sslStream.AuthenticateAsServerAsync(new System.Net.Security.SslServerAuthenticationOptions
-                {
-                    ServerCertificate = _certificate,
-                    ClientCertificateRequired = false,
-                    EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12,
-                    CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck
-                });
-                stream = sslStream;
+                stream = netStream;
 
-                var handshakeResult = await PerformHandshake(stream, remoteIp);
+                byte[] rsaPubKey;
+                using (var csp = new RSACryptoServiceProvider())
+                {
+                    csp.ImportRSAPublicKey(_certificate.GetRSAPublicKey().ExportRSAPublicKey(), out _);
+                    rsaPubKey = csp.ExportCspBlob(false);
+                }
+                byte[] lenBuf = new byte[4];
+                lenBuf[0] = (byte)(rsaPubKey.Length & 0xFF);
+                lenBuf[1] = (byte)((rsaPubKey.Length >> 8) & 0xFF);
+                lenBuf[2] = (byte)((rsaPubKey.Length >> 16) & 0xFF);
+                lenBuf[3] = (byte)((rsaPubKey.Length >> 24) & 0xFF);
+                await stream.WriteAsync(lenBuf, 0, 4, ct);
+                await stream.WriteAsync(rsaPubKey, 0, rsaPubKey.Length, ct);
+                await stream.FlushAsync(ct);
+
+                byte[] keyLenBuf = new byte[4];
+                if (!await ReadExactRaw(stream, keyLenBuf, 0, 4, ct))
+                { tcpClient.Close(); return; }
+                int encKeyLen = keyLenBuf[0] | (keyLenBuf[1] << 8) | (keyLenBuf[2] << 16) | (keyLenBuf[3] << 24);
+                if (encKeyLen <= 0 || encKeyLen > 512)
+                { tcpClient.Close(); return; }
+                byte[] encAesKey = new byte[encKeyLen];
+                if (!await ReadExactRaw(stream, encAesKey, 0, encKeyLen, ct))
+                { tcpClient.Close(); return; }
+
+                byte[] aesKey = SecureChannel.DecryptAesKey(encAesKey, _certificate.GetRSAPrivateKey());
+
+                var handshakeResult = await PerformHandshake(stream, aesKey, remoteIp);
                 if (handshakeResult == null)
                 {
                     tcpClient.Close();
@@ -257,7 +275,7 @@ namespace WpfApp
                         try { oldConn.Dispose(); } catch { }
                     }
 
-                    connection = new ClientConnection(machineId, connectionId, tcpClient, stream, remoteIp);
+                    connection = new ClientConnection(machineId, connectionId, tcpClient, stream, remoteIp, aesKey);
                     _clients[machineId] = connection;
                 }
                 finally
@@ -322,7 +340,6 @@ namespace WpfApp
                 connection?.Dispose();
                 if (connection == null)
                 {
-                    try { sslStream?.Dispose(); } catch { }
                     try { stream?.Dispose(); } catch { }
                     try { tcpClient?.Close(); } catch { }
                 }
@@ -337,17 +354,17 @@ namespace WpfApp
             public string ClientInfo;
         }
 
-        private async Task<HandshakeResult?> PerformHandshake(Stream stream, string remoteIp)
+        private async Task<HandshakeResult?> PerformHandshake(Stream stream, byte[] aesKey, string remoteIp)
         {
             try
             {
                 using var handshakeCts = new CancellationTokenSource(HandshakeTimeoutMs);
-                var (msgType, payload) = await ReadMessage(stream, handshakeCts.Token);
+                var (msgType, payload) = await SecureChannel.ReadEncryptedMessage(stream, aesKey, handshakeCts.Token);
 
                 if (msgType != MSG_AUTH || payload == null)
                 {
-                    await WriteMessage(stream, MSG_AUTH_FAIL,
-                        Encoding.UTF8.GetBytes("Invalid handshake"), CancellationToken.None);
+                    await SecureChannel.WriteEncryptedMessage(stream, MSG_AUTH_FAIL,
+                        Encoding.UTF8.GetBytes("Invalid handshake"), aesKey);
                     return null;
                 }
 
@@ -364,15 +381,15 @@ namespace WpfApp
                 }
                 catch
                 {
-                    await WriteMessage(stream, MSG_AUTH_FAIL,
-                        Encoding.UTF8.GetBytes("Authentication failed"), CancellationToken.None);
+                    await SecureChannel.WriteEncryptedMessage(stream, MSG_AUTH_FAIL,
+                        Encoding.UTF8.GetBytes("Authentication failed"), aesKey);
                     return null;
                 }
 
                 if (string.IsNullOrEmpty(machineId))
                 {
-                    await WriteMessage(stream, MSG_AUTH_FAIL,
-                        Encoding.UTF8.GetBytes("Authentication failed"), CancellationToken.None);
+                    await SecureChannel.WriteEncryptedMessage(stream, MSG_AUTH_FAIL,
+                        Encoding.UTF8.GetBytes("Authentication failed"), aesKey);
                     return null;
                 }
 
@@ -380,21 +397,21 @@ namespace WpfApp
                 {
                     if (string.IsNullOrEmpty(clientPassword))
                     {
-                        await WriteMessage(stream, MSG_AUTH_FAIL,
-                            Encoding.UTF8.GetBytes("Password required"), CancellationToken.None);
+                        await SecureChannel.WriteEncryptedMessage(stream, MSG_AUTH_FAIL,
+                            Encoding.UTF8.GetBytes("Password required"), aesKey);
                         return null;
                     }
 
                     if (clientPassword != _serverPassword)
                     {
-                        await WriteMessage(stream, MSG_AUTH_FAIL,
-                            Encoding.UTF8.GetBytes("Invalid password"), CancellationToken.None);
+                        await SecureChannel.WriteEncryptedMessage(stream, MSG_AUTH_FAIL,
+                            Encoding.UTF8.GetBytes("Invalid password"), aesKey);
                         return null;
                     }
                 }
 
-                await WriteMessage(stream, MSG_AUTH_OK,
-                    Encoding.UTF8.GetBytes("OK"), CancellationToken.None);
+                await SecureChannel.WriteEncryptedMessage(stream, MSG_AUTH_OK,
+                    Encoding.UTF8.GetBytes("OK"), aesKey);
 
                 return new HandshakeResult
                 {
@@ -426,7 +443,7 @@ namespace WpfApp
             {
                 try
                 {
-                    var (msgType, payload) = await ReadMessage(conn.Stream, token);
+                    var (msgType, payload) = await SecureChannel.ReadEncryptedMessage(conn.Stream, conn.AesKey, token);
 
                     if (msgType == 0 && payload == null)
                         break;
@@ -879,6 +896,12 @@ namespace WpfApp
             return true;
         }
 
+        private static Task<bool> ReadExactRaw(Stream stream, byte[] buffer, int offset,
+            int count, CancellationToken ct)
+        {
+            return ReadExact(stream, buffer, offset, count, ct);
+        }
+
         private bool IsRateAllowed(string ip)
         {
             var now = DateTime.UtcNow;
@@ -1066,6 +1089,7 @@ namespace WpfApp
         public string RemoteIp { get; }
         public DateTime LastSeen { get; set; }
         public Stream Stream { get; }
+        public byte[] AesKey { get; }
         public bool IsConnected => !_disposed && (_tcpClient?.Connected ?? false);
         public bool IsCancelled => _cts.IsCancellationRequested;
         public CancellationToken CancellationToken => _cts.Token;
@@ -1077,12 +1101,13 @@ namespace WpfApp
         private readonly CancellationTokenSource _cts = new();
         private bool _disposed;
 
-        public ClientConnection(string machineId, long connectionId, TcpClient tcpClient, Stream stream, string remoteIp)
+        public ClientConnection(string machineId, long connectionId, TcpClient tcpClient, Stream stream, string remoteIp, byte[] aesKey)
         {
             MachineId = machineId;
             ConnectionId = connectionId;
             _tcpClient = tcpClient;
             Stream = stream;
+            AesKey = aesKey;
             RemoteIp = remoteIp;
             LastSeen = DateTime.UtcNow;
         }
@@ -1100,22 +1125,7 @@ namespace WpfApp
             try
             {
                 if (_disposed || !IsConnected) return;
-
-                int payloadLen = payload?.Length ?? 0;
-                int totalLen = 1 + payloadLen;
-
-                byte[] packet = new byte[4 + totalLen];
-                packet[0] = (byte)(totalLen & 0xFF);
-                packet[1] = (byte)((totalLen >> 8) & 0xFF);
-                packet[2] = (byte)((totalLen >> 16) & 0xFF);
-                packet[3] = (byte)((totalLen >> 24) & 0xFF);
-                packet[4] = msgType;
-
-                if (payload != null && payload.Length > 0)
-                    Buffer.BlockCopy(payload, 0, packet, 5, payload.Length);
-
-                await Stream.WriteAsync(packet, 0, packet.Length);
-                await Stream.FlushAsync();
+                await SecureChannel.WriteEncryptedMessage(Stream, msgType, payload, AesKey);
             }
             finally
             {

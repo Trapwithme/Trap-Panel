@@ -21,11 +21,11 @@ namespace WpfApp
 
         public static X509Certificate2 GenerateCertificate(string subjectName = "Trap-Panel Server CA")
         {
-            using var rsa = RSA.Create(4096);
+            using var rsa = RSA.Create(2048);
             var request = new CertificateRequest(
                 $"CN={subjectName}",
                 rsa,
-                HashAlgorithmName.SHA512,
+                HashAlgorithmName.SHA256,
                 RSASignaturePadding.Pkcs1);
 
             request.CertificateExtensions.Add(
@@ -34,8 +34,12 @@ namespace WpfApp
                 new X509SubjectKeyIdentifierExtension(request.PublicKey, false));
             request.CertificateExtensions.Add(
                 new X509KeyUsageExtension(
-                    X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature,
+                    X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
                     true));
+            request.CertificateExtensions.Add(
+                new X509EnhancedKeyUsageExtension(
+                    new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") },
+                    false));
 
             var certificate = request.CreateSelfSigned(
                 DateTimeOffset.UtcNow.AddDays(-1),
@@ -57,7 +61,27 @@ namespace WpfApp
                 throw new FileNotFoundException("Certificate files not found.");
 
             string password = File.ReadAllText(CertPasswordPath);
-            return new X509Certificate2(CertPath, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(CertPath, password, X509KeyStorageFlags.Exportable);
+
+            try
+            {
+                using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+                store.Open(OpenFlags.ReadWrite);
+                bool found = false;
+                foreach (var existing in store.Certificates)
+                {
+                    if (existing.Thumbprint == cert.Thumbprint)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    store.Add(cert);
+            }
+            catch { }
+
+            return cert;
         }
 
         public static byte[] GetCertificatePublicKeyBytes(X509Certificate2 certificate)
@@ -69,6 +93,20 @@ namespace WpfApp
         {
             if (File.Exists(CertPath)) File.Delete(CertPath);
             if (File.Exists(CertPasswordPath)) File.Delete(CertPasswordPath);
+
+            try
+            {
+                using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+                store.Open(OpenFlags.ReadWrite);
+                foreach (var cert in store.Certificates)
+                {
+                    if (cert.Subject.Contains("Trap-Panel Server"))
+                    {
+                        store.Remove(cert);
+                    }
+                }
+            }
+            catch { }
         }
     }
 }

