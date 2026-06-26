@@ -313,6 +313,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
                                 CornerRadius="6"
                                 SnapsToDevicePixels="True">
                             <ScrollViewer x:Name="PART_ContentHost"
@@ -343,6 +344,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Padding" Value="10,8"/>
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="PasswordBox">
@@ -350,6 +352,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
                                 CornerRadius="6"
                                 SnapsToDevicePixels="True">
                             <ScrollViewer x:Name="PART_ContentHost"
@@ -1296,12 +1299,12 @@
                                     <StackPanel Grid.Row="1" Margin="20,16,20,20">
                                         <TextBlock Text="SERVER IP / HOSTNAME" Foreground="{DynamicResource TextSecondaryBrush}"
                                                    FontWeight="SemiBold" FontSize="11" Margin="0,0,0,6"/>
-                                        <TextBox x:Name="builderIpTextBox" Padding="12,10" Margin="0,0,0,14" FontSize="11"
+                                        <TextBox x:Name="builderIpTextBox" Padding="12,10" Margin="0,0,0,14" FontSize="13"
                                                    MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
 
                                         <TextBlock Text="PORT" Foreground="{DynamicResource TextSecondaryBrush}"
                                                    FontWeight="SemiBold" FontSize="11" Margin="0,0,0,6"/>
-                                        <TextBox x:Name="builderPortTextBox" Padding="12,10" Margin="0,0,0,14" FontSize="11"
+                                        <TextBox x:Name="builderPortTextBox" Padding="12,10" Margin="0,0,0,14" FontSize="13"
                                                    MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
 
                                         <TextBlock Text="PASSWORD" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -1311,7 +1314,7 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <PasswordBox x:Name="builderPasswordBox" Grid.Column="0" Padding="12,10" FontSize="11"
+                                            <PasswordBox x:Name="builderPasswordBox" Grid.Column="0" Padding="12,10" FontSize="13"
                                                          MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
                                         </Grid>
                                         <TextBlock Text="Minimum 12 characters · Used for authentication"
@@ -1327,10 +1330,10 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="builderEncryptionKeyTextBox" Grid.Column="0"
-                                                     FontFamily="Cascadia Mono, Consolas, monospace"
-                                                     FontSize="11" Padding="12,10"
-                                                     MinHeight="36" VerticalContentAlignment="Center"
-                                                     HorizontalAlignment="Stretch"/>
+                                                      FontFamily="Cascadia Mono, Consolas, monospace"
+                                                      FontSize="13" Padding="12,10"
+                                                      MinHeight="36" VerticalContentAlignment="Center"
+                                                      HorizontalAlignment="Stretch"/>
                                             <Button Grid.Column="2" Content="Generate" Click="GenerateKeyButton_Click"
                                                     Style="{StaticResource OutlineButton}" Padding="14,8" FontSize="12"/>
                                         </Grid>
@@ -1524,7 +1527,7 @@
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8"
-                                    Padding="24,14"
+                                    Padding="20,14"
                                     Margin="0,0,0,24">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -1532,8 +1535,14 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="🎨" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="Theme Settings" FontSize="20" FontWeight="Bold"
+                                        <Border Width="32" Height="32" CornerRadius="6"
+                                                Background="{DynamicResource PrimaryBrush}"
+                                                VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <TextBlock Text="🎨" FontSize="16"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Theme Settings" FontSize="18" FontWeight="Bold"
                                                    Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <Border Grid.Column="1"
@@ -1557,19 +1566,44 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="cardBorder"
-                                                Width="240" Height="200"
+                                                Width="230" Height="216"
                                                 Margin="0,0,16,16"
                                                 CornerRadius="10"
                                                 Background="{DynamicResource SurfaceBrush}"
-                                                BorderBrush="{DynamicResource BorderBrush}"
                                                 BorderThickness="1"
                                                 Cursor="Hand"
                                                 SnapsToDevicePixels="True"
-                                                MouseLeftButtonUp="ThemeCard_Click">
+                                                MouseLeftButtonUp="ThemeCard_Click"
+                                                RenderTransformOrigin="0.5,0.5">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                            </Border.RenderTransform>
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                                     <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Trigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                                                         To="1.03" Duration="0:0:0.12"/>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                                                         To="1.03" Duration="0:0:0.12"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.EnterActions>
+                                                            <Trigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                                                                         To="1.0" Duration="0:0:0.12"/>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                                                                         To="1.0" Duration="0:0:0.12"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </Trigger.ExitActions>
+                                                        </Trigger>
                                                         <DataTrigger Binding="{Binding IsActive}" Value="True">
                                                             <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
                                                             <Setter Property="BorderThickness" Value="2"/>
@@ -1577,55 +1611,120 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <Grid Margin="16,14">
+                                            <Grid>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="*"/>
                                                     <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
 
-                                                <!-- Theme Name -->
-                                                <TextBlock Grid.Row="0"
-                                                           Text="{Binding DisplayName}"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                                           FontSize="15" FontWeight="Bold"
-                                                           Margin="0,0,0,10"/>
+                                                <!-- Color Preview Strip -->
+                                                <Grid Grid.Row="0" Height="40">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Background="{Binding PrimaryBrush}"
+                                                            CornerRadius="10,0,0,0"/>
+                                                    <Border Grid.Column="1" Background="{Binding SurfaceBrush}"/>
+                                                    <Border Grid.Column="2" Background="{Binding BackgroundBrush}"/>
+                                                    <Border Grid.Column="3" Background="{Binding BorderBrush}"
+                                                            CornerRadius="0,10,0,0"/>
+                                                </Grid>
 
-                                                <!-- Color Swatches -->
-                                                <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                                    <Border Width="44" Height="44" CornerRadius="6"
-                                                            Background="{Binding PrimaryBrush}"
-                                                            Margin="0,0,6,6"
-                                                            ToolTip="Primary"/>
-                                                    <Border Width="44" Height="44" CornerRadius="6"
-                                                            Background="{Binding SurfaceBrush}"
-                                                            BorderBrush="{DynamicResource BorderBrush}"
-                                                            BorderThickness="1"
-                                                            Margin="0,0,6,6"
-                                                            ToolTip="Surface"/>
-                                                    <Border Width="44" Height="44" CornerRadius="6"
-                                                            Background="{Binding BackgroundBrush}"
-                                                            BorderBrush="{DynamicResource BorderBrush}"
-                                                            BorderThickness="1"
-                                                            Margin="0,0,6,6"
-                                                            ToolTip="Background"/>
-                                                    <Border Width="44" Height="44" CornerRadius="6"
-                                                            Background="{Binding BorderBrush}"
-                                                            Margin="0,0,6,6"
-                                                            ToolTip="Border"/>
-                                                </WrapPanel>
+                                                <!-- Content -->
+                                                <Grid Grid.Row="1" Margin="14,12,14,0">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
 
-                                                <!-- Active indicator -->
+                                                    <!-- Theme Name with active dot -->
+                                                    <StackPanel Grid.Row="0" Orientation="Horizontal"
+                                                                Margin="0,0,0,8">
+                                                        <Ellipse Width="8" Height="8"
+                                                                 Fill="{DynamicResource PrimaryBrush}"
+                                                                 Margin="0,0,6,0"
+                                                                 VerticalAlignment="Center"
+                                                                 Opacity="0">
+                                                            <Ellipse.Style>
+                                                                <Style TargetType="Ellipse">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                            <Setter Property="Opacity" Value="1"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Ellipse.Style>
+                                                        </Ellipse>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                   FontSize="15" FontWeight="Bold"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+
+                                                    <!-- Color Swatches -->
+                                                    <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                                        <Border Width="34" Height="34" CornerRadius="6"
+                                                                Background="{Binding PrimaryBrush}"
+                                                                Margin="0,0,6,6"
+                                                                ToolTip="Primary"/>
+                                                        <Border Width="34" Height="34" CornerRadius="6"
+                                                                Background="{Binding SurfaceBrush}"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                BorderThickness="1"
+                                                                Margin="0,0,6,6"
+                                                                ToolTip="Surface"/>
+                                                        <Border Width="34" Height="34" CornerRadius="6"
+                                                                Background="{Binding BackgroundBrush}"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                BorderThickness="1"
+                                                                Margin="0,0,6,6"
+                                                                ToolTip="Background"/>
+                                                        <Border Width="34" Height="34" CornerRadius="6"
+                                                                Background="{Binding BorderBrush}"
+                                                                Margin="0,0,6,6"
+                                                                ToolTip="Border"/>
+                                                    </WrapPanel>
+                                                </Grid>
+
+                                                <!-- Active badge -->
                                                 <Border Grid.Row="2"
-                                                        x:Name="activeBadge"
                                                         Background="{DynamicResource PrimaryBrush}"
-                                                        CornerRadius="4"
-                                                        Padding="8,3"
-                                                        HorizontalAlignment="Left"
-                                                        Visibility="Collapsed">
+                                                        CornerRadius="0,0,10,10"
+                                                        Padding="0,4"
+                                                        Height="22"
+                                                        Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}">
                                                     <TextBlock Text="✓ Active"
                                                                Foreground="White"
-                                                               FontSize="11" FontWeight="Bold"/>
+                                                               FontSize="11" FontWeight="Bold"
+                                                               HorizontalAlignment="Center"/>
+                                                </Border>
+
+                                                <!-- Inactive bottom bar -->
+                                                <Border Grid.Row="2"
+                                                        Background="{DynamicResource SurfaceLightBrush}"
+                                                        CornerRadius="0,0,10,10"
+                                                        Padding="0,4"
+                                                        Height="22"
+                                                        Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="Click to apply"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               FontSize="10"
+                                                               HorizontalAlignment="Center"/>
                                                 </Border>
                                             </Grid>
                                         </Border>
@@ -1742,8 +1841,8 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="listenportTextBox" Grid.Column="0"
-                                                     Padding="12,10" FontSize="11" MinHeight="36"
-                                                     VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
+                                                      Padding="12,10" FontSize="13" MinHeight="36"
+                                                      VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
                                             <Button x:Name="btnListenToggle" Grid.Column="2"
                                                     Content="▶ Start Listening"
                                                     Click="BtnListenToggle_Click"
@@ -1765,8 +1864,8 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <PasswordBox x:Name="HttpPasswordBox" Grid.Column="0"
-                                                         Padding="12,10" FontSize="11" MinHeight="36"
-                                                         VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
+                                                          Padding="12,10" FontSize="13" MinHeight="36"
+                                                          VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
                                             <Button Grid.Column="3" x:Name="setPasswordButton" Content="Set"
                                                     Click="SetPasswordButton_Click"
                                                     Style="{StaticResource PrimaryButton}" Padding="20,9" FontSize="12"
@@ -1919,13 +2018,13 @@
                                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                                 <TextBlock Text="Bot Token" Foreground="{DynamicResource TextSecondaryBrush}"
                                                            FontWeight="SemiBold" FontSize="11" Margin="0,0,0,5"/>
-                                                <PasswordBox x:Name="telegramTokenBox" Padding="12,10" FontSize="11"
+                                                <PasswordBox x:Name="telegramTokenBox" Padding="12,10" FontSize="13"
                                                              MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Margin="10,0,0,0">
                                                 <TextBlock Text="Chat ID" Foreground="{DynamicResource TextSecondaryBrush}"
                                                            FontWeight="SemiBold" FontSize="11" Margin="0,0,0,5"/>
-                                                <TextBox x:Name="telegramChatIdBox" Padding="12,10" FontSize="11"
+                                                <TextBox x:Name="telegramChatIdBox" Padding="12,10" FontSize="13"
                                                          MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
                                             </StackPanel>
                                         </Grid>

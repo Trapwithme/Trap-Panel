@@ -80,7 +80,6 @@ namespace WpfApp
         private readonly ConcurrentDictionary<string, string> _displayToRawId = new();
 
         // Tracks display IDs per base name with incrementing counter
-        private readonly ConcurrentDictionary<string, int> _baseNameCounter = new();
         private readonly object _idAssignmentLock = new object();
 
         // Tracks which display IDs have already had auto tasks executed
@@ -199,22 +198,44 @@ namespace WpfApp
             pwBox.PasswordChanged += (s, e) => txtBox.Text = pwBox.Password;
             txtBox.TextChanged += (s, e) => pwBox.Password = txtBox.Text;
 
+            var brdrBrush = (SolidColorBrush)Application.Current.Resources["BorderBrush"];
+            var txtDimBrush = (SolidColorBrush)Application.Current.Resources["TextSecondaryBrush"];
+            var sfLightBrush = (SolidColorBrush)Application.Current.Resources["SurfaceLightBrush"];
+
+            var eyeBtnBorder = new Border
+            {
+                Width = 36,
+                Height = 36,
+                CornerRadius = new CornerRadius(6),
+                Background = Brushes.Transparent,
+                BorderBrush = brdrBrush,
+                BorderThickness = new Thickness(1),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 0, 0)
+            };
+
             var eyeBtn = new System.Windows.Controls.Primitives.ToggleButton
             {
                 Content = "👁",
-                Width = 36,
-                Height = 36,
                 VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
                 IsChecked = false,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Cursor = Cursors.Hand,
-                ToolTip = "Show/hide password"
+                ToolTip = "Show/hide password",
+                Foreground = txtDimBrush
             };
+
+            eyeBtnBorder.Child = eyeBtn;
+
             eyeBtn.Checked += (s, e) => { pwBox.Visibility = Visibility.Collapsed; txtBox.Visibility = Visibility.Visible; };
             eyeBtn.Unchecked += (s, e) => { txtBox.Visibility = Visibility.Collapsed; pwBox.Visibility = Visibility.Visible; };
-            Grid.SetColumn(eyeBtn, col + 1);
-            parent.Children.Add(eyeBtn);
+            eyeBtn.MouseEnter += (s, e) => { eyeBtnBorder.Background = sfLightBrush; eyeBtnBorder.BorderBrush = txtDimBrush; };
+            eyeBtn.MouseLeave += (s, e) => { eyeBtnBorder.Background = Brushes.Transparent; eyeBtnBorder.BorderBrush = brdrBrush; };
+
+            Grid.SetColumn(eyeBtnBorder, col + 1);
+            parent.Children.Add(eyeBtnBorder);
         }
 
         // ==================== LOG LEVELS ====================
@@ -1103,8 +1124,9 @@ namespace WpfApp
                 Background = bgBr,
                 BorderBrush = bb,
                 BorderThickness = new Thickness(1),
-                Padding = new Thickness(6, 3, 6, 3),
-                FontSize = 12,
+                Padding = new Thickness(10, 8, 10, 8),
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 2, 0, 4)
             };
             Grid.SetRow(tb, row); Grid.SetColumn(tb, 1);
@@ -1575,25 +1597,18 @@ namespace WpfApp
                 if (_rawToDisplayId.TryGetValue(rawClientId, out existingDisplayId))
                     return existingDisplayId;
 
-                int ordinal = _baseNameCounter.AddOrUpdate(machineName, 1, (_, old) => old + 1);
+                displayId = machineName;
 
-                if (ordinal == 1)
+                if (_displayToRawId.ContainsKey(displayId))
                 {
-                    displayId = machineName;
-
-                    if (_displayToRawId.ContainsKey(displayId))
-                        displayId = $"{machineName} ({ordinal})";
-                }
-                else
-                {
-                    displayId = $"{machineName} ({ordinal})";
+                    string suffix = rawClientId.Length >= 4 ? rawClientId[..4] : rawClientId;
+                    displayId = $"{machineName}_{suffix}";
                 }
 
                 while (_displayToRawId.ContainsKey(displayId))
                 {
-                    ordinal++;
-                    _baseNameCounter[machineName] = ordinal;
-                    displayId = $"{machineName} ({ordinal})";
+                    string suffix = rawClientId.Length >= 6 ? rawClientId[..6] : rawClientId;
+                    displayId = $"{machineName}_{suffix}";
                 }
 
                 // Commit mappings inside lock to prevent races
@@ -1647,7 +1662,6 @@ namespace WpfApp
 
             _rawToDisplayId.Clear();
             _displayToRawId.Clear();
-            _baseNameCounter.Clear();
             _clientLastSeen.Clear();
             _autoTasksExecutedFor.Clear();
             _disconnectGracePeriod.Clear();
