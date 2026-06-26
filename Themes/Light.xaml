@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="PrimaryColor">#0969da</Color>
+    <Color x:Key="PrimaryHoverColor">#0556b3</Color>
+    <Color x:Key="PrimaryPressedColor">#044289</Color>
+    <Color x:Key="SurfaceColor">#ffffff</Color>
+    <Color x:Key="SurfaceLightColor">#eaeef2</Color>
+    <Color x:Key="BorderColor">#d0d7de</Color>
+    <Color x:Key="TextPrimaryColor">#1f2328</Color>
+    <Color x:Key="TextSecondaryColor">#656d76</Color>
+    <Color x:Key="DangerColor">#cf222e</Color>
+    <Color x:Key="DangerHoverColor">#a40e26</Color>
+    <Color x:Key="SuccessColor">#1a7f37</Color>
+    <Color x:Key="SuccessHoverColor">#116329</Color>
+    <Color x:Key="BackgroundColor">#f6f8fa</Color>
+    <Color x:Key="DisabledColor">#8c959f</Color>
+    <Color x:Key="WarningColor">#9a6700</Color>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryHoverColor}"/>
+    <SolidColorBrush x:Key="PrimaryPressedBrush" Color="{StaticResource PrimaryPressedColor}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
+    <SolidColorBrush x:Key="SurfaceLightBrush" Color="{StaticResource SurfaceLightColor}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="{StaticResource DangerHoverColor}"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="SuccessHoverBrush" Color="{StaticResource SuccessHoverColor}"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="DisabledBrush" Color="{StaticResource DisabledColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <Color x:Key="ButtonBgColor">#ebedf0</Color>
+    <Color x:Key="ButtonBgHoverColor">#d0d7de</Color>
+    <Color x:Key="ButtonBorderColor">#d0d7de</Color>
+
+    <SolidColorBrush x:Key="ButtonBgBrush" Color="{StaticResource ButtonBgColor}"/>
+    <SolidColorBrush x:Key="ButtonBgHoverBrush" Color="{StaticResource ButtonBgHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource ButtonBorderColor}"/>
+</ResourceDictionary>
