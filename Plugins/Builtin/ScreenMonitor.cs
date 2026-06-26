@@ -76,7 +76,7 @@ namespace WpfApp.Plugins.Builtin
          private string _lastMethod = ""none"";
          private int _okCount, _failCount;
          private int _preferredMethod = -1;
-         private volatile int _sending;
+         private int _sending;
          private int _skipCount;
          private Bitmap _reuseBmp;
          private int _reuseW, _reuseH;

@@ -662,20 +662,9 @@ public class TrapLoaderClient
                 Log("Authenticated successfully!");
                 reconnectCount = 0;
 
-                TcpMessage stale;
-                while (_incomingMessages.TryDequeue(out stale)) { }
-                _messageReady.Reset();
                 _connectionAlive = true;
 
-                Thread readerThread = new Thread(() => ReaderLoop(stream));
-                readerThread.IsBackground = true;
-                readerThread.Name = "TcpReader";
-                readerThread.Start();
-
                 RunSessionLoop(stream, systemInfo);
-
-                _connectionAlive = false;
-                readerThread.Join(3000);
             }
             catch (Exception ex)
             {
@@ -736,16 +725,31 @@ public class TrapLoaderClient
 
         while (_connectionAlive)
         {
-            _messageReady.Wait(100);
-            _messageReady.Reset();
-
-            if (!_connectionAlive) break;
-
-            TcpMessage msg;
-            while (_incomingMessages.TryDequeue(out msg))
+            TcpMessage msg = null;
+            try
             {
-                if (msg == null) continue;
+                if (stream.DataAvailable)
+                {
+                    msg = ReadEncryptedMessage(stream, _aesKey);
+                }
+            }
+            catch { }
 
+            if (msg == null)
+            {
+                try
+                {
+                    if (stream.DataAvailable)
+                    {
+                        msg = ReadEncryptedMessage(stream, _aesKey);
+                        if (msg == null) { _connectionAlive = false; break; }
+                    }
+                }
+                catch { _connectionAlive = false; break; }
+            }
+
+            if (msg != null)
+            {
                 try
                 {
                     switch (msg.Type)
@@ -787,6 +791,7 @@ public class TrapLoaderClient
                 {
                     Log("Message handling error: " + ex.Message);
                 }
+                continue;
             }
 
             if (!_connectionAlive) break;
@@ -861,6 +866,8 @@ public class TrapLoaderClient
                 lastCleanup = now;
                 CleanupDeadPlugins();
             }
+
+            System.Threading.Thread.Sleep(250);
         }
     }
 

