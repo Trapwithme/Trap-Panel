@@ -1,8 +1,8 @@
 # Trap Panel
 
-**Modular C2 framework with TLS 1.3 encrypted TCP, 18 plugins, and C#/PowerShell stub deployment.**
+**Modular remote administration framework with TLS 1.3 encrypted TCP, 18 plugins, and C#/PowerShell agent deployment.**
 
-Trap Panel is a C2 framework coded in C# (.NET 8, WPF) featuring TLS 1.3 encrypted TCP communications, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell stub deployment. It provides a broad feature set ranging from system administration to security research.
+Trap Panel is a remote administration framework coded in C# (.NET 8, WPF) featuring TLS 1.3 encrypted TCP communications, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell agent deployment. It provides a broad feature set ranging from system administration to security research.
 
 ## Screenshots
 
@@ -11,13 +11,13 @@ Trap Panel is a C2 framework coded in C# (.NET 8, WPF) featuring TLS 1.3 encrypt
 ## Features
 
 - **TLS 1.3 encrypted transport** — all traffic secured via SslStream with AES-256-GCM payload encryption
-- **18 built-in plugins** — shell, file manager, registry, screen monitor, keylogger, webcam, microphone, HVNC, SOCKS5 proxy, crypto miner, wallet stealer, bot killer, persistence, system info, process monitor, rootkit, ransomware-style countdown, auto-update
-- **C# + PowerShell stub generation** — Roslyn-compiled .NET executable or lightweight PowerShell script
+- **18 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, API hooks, countdown, auto-update
+- **C# + PowerShell agent generation** — Roslyn-compiled .NET executable or lightweight PowerShell script
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
 - **8 customizable themes** — Dark, Light, Midnight, Hacker, Nord, Dracula, Solarized, Tokyo Night
-- **Rate limiting & anti-analysis** — connection throttling, anti-debug, anti-VM, process protection
+- **Rate limiting & environment checks** — connection throttling, debugger and sandbox detection
 - **Certificate-based server identity** — auto-generated RSA 4096-bit self-signed certificate
 
 ## Built-in Plugins
@@ -29,37 +29,37 @@ Trap Panel is a C2 framework coded in C# (.NET 8, WPF) featuring TLS 1.3 encrypt
 | **Registry** | Full Windows registry editor — read, write, create, delete keys and values |
 | **Screen Monitor** | Capture screenshots and stream real-time screen feed |
 | **Process Monitor** | List running processes, kill by PID, start new processes |
-| **Keylogger** | Global keyboard hook capturing keystrokes with timestamps |
+| **Keystroke Monitor** | Global keyboard hook monitoring input with timestamps |
 | **Webcam** | Capture webcam images and stream video feed (AVICAP32 / WinRT) |
 | **Microphone** | Real-time audio surveillance via NAudio (16kHz, 16-bit PCM) |
-| **HVNC** | Hidden Virtual Network Computing — desktop interaction in a hidden Windows desktop |
+| **Remote Desktop** | Desktop interaction via virtual network computing |
 | **SOCKS5 Proxy** | Full SOCKS5 proxy server running on the client (CONNECT, auth methods) |
 | **Crypto Miner** | Download and execute XMRig with configurable pool, wallet, and CPU affinity |
-| **Wallet Stealer** | Search and exfiltrate 16+ cryptocurrency wallet files |
-| **Bot Killer** | Terminate 200+ competing RAT/miner/malware processes |
+| **Wallet Finder** | Search and locate 16+ cryptocurrency wallet files |
+| **Process Guard** | Terminate 200+ competing processes |
 | **Persistence** | Install startup persistence via Registry Run, Startup folder, Scheduled Task, WMI |
 | **System Info** | Gather comprehensive system, hardware, network, software, and service information |
 | **Fun** | Swap mouse, flip screen, open CD tray, toggle locks, message boxes, wallpaper |
-| **Rootkit** | Userland API hooking via EasyHook — hide files, processes, registry keys |
-| **Countdown** | AES-256-CBC file encryption with ransomware-style countdown timer |
-| **Update** | Download and replace client payload for self-updates |
+| **API Hooks** | Userland API hooking via EasyHook for custom filtering |
+| **Countdown** | AES-256-CBC file encryption with countdown timer |
+| **Update** | Download and replace client agent for self-updates |
 
-## Stub Builder
+## Agent Builder
 
-Configure and generate deployment-ready stubs from the Builder tab.
+Configure and generate deployment-ready agents from the Builder tab.
 
 | Option | Description |
 |---|---|
-| Server IP / Hostname | C2 server address |
+| Server IP / Hostname | Server address |
 | Port | TCP port for client connection |
 | Password | Authentication secret (minimum 12 characters) |
 | Encryption Key | AES-256 key for PBKDF2 (optional — TLS secures transport) |
-| Silent Mode | Run stub without console or visible window |
-| Install Name | Filename for the installed payload |
-| Install Directory | Target directory for payload installation |
+| Silent Mode | Run agent without console or visible window |
+| Install Name | Filename for the installed agent |
+| Install Directory | Target directory for agent installation |
 | Startup Method | Registry / Startup Folder / Scheduled Task |
-| Anti Debug | Enable debugger detection and evasion |
-| Killer | Enable competing process termination |
+| Anti Debug | Enable debugger detection |
+| Process Guard | Enable competing process termination |
 | Output | Standalone .EXE (.NET 8) or .PS1 script |
 
 ## Transport Protocol
@@ -121,9 +121,9 @@ Authentication JSON format:
 | **Panel Dependencies** | NuGet: DiscordRichPresence, Microsoft.CodeAnalysis.CSharp 5.0, Newtonsoft.Json 13.0, System.Management 8.0 |
 | **Client OS** | Windows 7 or later |
 | **Client Runtime** | .NET Framework 4.8 or .NET 8 |
-| **Client Privileges** | User or Administrator (Admin required for HVNC, rootkit) |
+| **Client Privileges** | User or Administrator (Admin required for remote desktop, API hooks) |
 | **Resolution** | Minimum 1100 x 700 |
-| **Network** | Outbound TCP to C2 server |
+| **Network** | Outbound TCP to server |
 
 ## Building
 
@@ -142,8 +142,8 @@ Run the generated executable from `bin\Debug\net8.0-windows7.0\LoaderKeyed.exe`.
 2. **Set password** — navigate to Settings, set a server password (minimum 12 characters)
 3. **Start listening** — click "Start Listening" to begin accepting client connections
 4. **Configure builder** — enter server IP, port, and password in the Builder tab
-5. **Generate stub** — click "Generate PS1" or "Compile EXE"
-6. **Deploy** — run the generated stub on the target machine
+5. **Generate agent** — click "Generate PS1" or "Compile EXE"
+6. **Deploy** — run the generated agent on the target machine
 7. **Manage** — connected clients appear in the Clients tab; right-click to launch plugins
 
 ## Themes
@@ -169,8 +169,8 @@ Run the generated executable from `bin\Debug\net8.0-windows7.0\LoaderKeyed.exe`.
 | Authentication | Password validated via constant-time comparison over TLS |
 | Rate limiting | 100 max concurrent connections, 5 per IP |
 | Auto-ban | 1-hour IP ban after 3 failed auth attempts |
-| Anti-debug | Debugger detection, anti-VM checks, sandbox evasion |
-| Protection | Userland API hooking via EasyHook (optional rootkit) |
+| Environment checks | Debugger detection, sandbox detection |
+| Protection | Userland API hooking via EasyHook (optional) |
 
 ## License
 
