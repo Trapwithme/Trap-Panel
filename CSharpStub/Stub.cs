@@ -728,7 +728,7 @@ public class TrapLoaderClient
             TcpMessage msg = null;
             try
             {
-                if (stream.DataAvailable)
+                if (((NetworkStream)stream).DataAvailable)
                 {
                     msg = ReadEncryptedMessage(stream, _aesKey);
                 }
@@ -739,7 +739,7 @@ public class TrapLoaderClient
             {
                 try
                 {
-                    if (stream.DataAvailable)
+                    if (((NetworkStream)stream).DataAvailable)
                     {
                         msg = ReadEncryptedMessage(stream, _aesKey);
                         if (msg == null) { _connectionAlive = false; break; }

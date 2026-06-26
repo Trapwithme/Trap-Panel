@@ -2904,6 +2904,13 @@ namespace WpfApp
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include=""System.Management"" />
+    <Reference Include=""System.Net.Http"" />
+    <Reference Include=""System.Windows.Forms"" />
+    <Reference Include=""System.Drawing"" />
+    <Reference Include=""System.ServiceProcess"" />
+  </ItemGroup>
 </Project>";
 
                     string csprojPath = Path.Combine(buildDir, "Stub.csproj");
