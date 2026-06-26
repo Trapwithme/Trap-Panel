@@ -382,6 +382,7 @@ namespace WpfApp
         {
             public string Name { get; set; }
             public string DisplayName { get; set; }
+            public string Description { get; set; }
             public bool IsActive { get; set; }
             public SolidColorBrush PrimaryBrush { get; set; }
             public SolidColorBrush SurfaceBrush { get; set; }
@@ -1931,6 +1932,21 @@ namespace WpfApp
             var cards = new List<ThemeCardItem>();
             string current = ThemeManager.CurrentTheme;
 
+            var descriptions = new Dictionary<string, string>
+            {
+                { "Dark", "Default dark theme, easy on the eyes" },
+                { "Light", "Clean light theme for daytime use" },
+                { "Midnight", "Deep midnight tones with teal accents" },
+                { "Hacker", "Classic green-on-black terminal vibe" },
+                { "Nord", "Arctic blue palette, cool and calm" },
+                { "Dracula", "Dark purple base with vibrant accents" },
+                { "Solarized", "Earthy warm tones, low contrast" },
+                { "Tokyo Night", "Deep blue night scene with neon pops" },
+                { "Monokai", "Bold green and pink, editor classic" },
+                { "One Dark", "Atom-inspired, smooth and modern" },
+                { "Catppuccin", "Mocha blend, soft pastel accents" }
+            };
+
             foreach (var kvp in ThemeManager.Themes)
             {
                 var rd = new ResourceDictionary { Source = new Uri(kvp.Value, UriKind.Relative) };
@@ -1938,6 +1954,7 @@ namespace WpfApp
                 {
                     Name = kvp.Key,
                     DisplayName = kvp.Key,
+                    Description = descriptions.TryGetValue(kvp.Key, out var desc) ? desc : "",
                     IsActive = kvp.Key == current,
                     PrimaryBrush = rd["PrimaryBrush"] as SolidColorBrush,
                     SurfaceBrush = rd["SurfaceBrush"] as SolidColorBrush,

@@ -1519,15 +1519,16 @@
             <TabItem Header="Themes" x:Name="themesTab">
                 <Grid Background="{DynamicResource BackgroundBrush}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  >
                         <StackPanel Margin="24,16,24,24">
 
                             <!-- Header -->
                             <Border Background="{DynamicResource SurfaceBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="20,14"
+                                    CornerRadius="12"
+                                    Padding="20,16"
                                     Margin="0,0,0,24">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -1535,29 +1536,43 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Width="32" Height="32" CornerRadius="6"
+                                        <Border Width="36" Height="36" CornerRadius="8"
                                                 Background="{DynamicResource PrimaryBrush}"
-                                                VerticalAlignment="Center" Margin="0,0,10,0">
-                                            <TextBlock Text="🎨" FontSize="16"
+                                                VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="🎨" FontSize="18"
                                                        HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"/>
                                         </Border>
-                                        <TextBlock Text="Theme Settings" FontSize="18" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Appearance" FontSize="18" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Choose a theme to personalize the panel"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontSize="12" Margin="0,2,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
                                     <Border Grid.Column="1"
                                             Background="{DynamicResource SurfaceLightBrush}"
-                                            CornerRadius="4" Padding="10,4">
-                                        <TextBlock x:Name="currentThemeLabel"
-                                                   Text="Current: Dark"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6" Padding="12,6"
+                                            VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6"
+                                                     Fill="{DynamicResource SuccessBrush}"
+                                                     VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="currentThemeLabel"
+                                                       Text="Dark"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       FontSize="12" FontWeight="SemiBold"/>
+                                        </StackPanel>
                                     </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Theme Cards Grid -->
-                            <ItemsControl x:Name="themeCardsPanel">
+                            <ItemsControl x:Name="themeCardsPanel"
+                                          HorizontalAlignment="Center">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel Orientation="Horizontal"/>
@@ -1566,9 +1581,9 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="cardBorder"
-                                                Width="230" Height="216"
+                                                Width="248" Height="232"
                                                 Margin="0,0,16,16"
-                                                CornerRadius="10"
+                                                CornerRadius="12"
                                                 Background="{DynamicResource SurfaceBrush}"
                                                 BorderThickness="1"
                                                 Cursor="Hand"
@@ -1587,9 +1602,17 @@
                                                                 <BeginStoryboard>
                                                                     <Storyboard>
                                                                         <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                                         To="1.03" Duration="0:0:0.12"/>
+                                                                                         To="1.04" Duration="0:0:0.15">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CircleEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
                                                                         <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                                         To="1.03" Duration="0:0:0.12"/>
+                                                                                         To="1.04" Duration="0:0:0.15">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CircleEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
                                                                     </Storyboard>
                                                                 </BeginStoryboard>
                                                             </Trigger.EnterActions>
@@ -1597,9 +1620,17 @@
                                                                 <BeginStoryboard>
                                                                     <Storyboard>
                                                                         <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                                         To="1.0" Duration="0:0:0.12"/>
+                                                                                         To="1.0" Duration="0:0:0.15">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CircleEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
                                                                         <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                                         To="1.0" Duration="0:0:0.12"/>
+                                                                                         To="1.0" Duration="0:0:0.15">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CircleEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
                                                                     </Storyboard>
                                                                 </BeginStoryboard>
                                                             </Trigger.ExitActions>
@@ -1619,112 +1650,132 @@
                                                 </Grid.RowDefinitions>
 
                                                 <!-- Color Preview Strip -->
-                                                <Grid Grid.Row="0" Height="40">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Column="0" Background="{Binding PrimaryBrush}"
-                                                            CornerRadius="10,0,0,0"/>
-                                                    <Border Grid.Column="1" Background="{Binding SurfaceBrush}"/>
-                                                    <Border Grid.Column="2" Background="{Binding BackgroundBrush}"/>
-                                                    <Border Grid.Column="3" Background="{Binding BorderBrush}"
-                                                            CornerRadius="0,10,0,0"/>
-                                                </Grid>
+                                                <Border Grid.Row="0" CornerRadius="12,12,0,0"
+                                                        Background="{DynamicResource SurfaceLightBrush}"
+                                                        Padding="0" Height="52"
+                                                        BorderThickness="0,0,0,1"
+                                                        BorderBrush="{DynamicResource BorderBrush}">
+                                                    <Grid Margin="8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Background="{Binding PrimaryBrush}"
+                                                                CornerRadius="6,0,0,6" Margin="0,0,2,0"/>
+                                                        <Border Grid.Column="1" Background="{Binding SurfaceBrush}"
+                                                                BorderThickness="1"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                CornerRadius="0" Margin="1,0"/>
+                                                        <Border Grid.Column="2" Background="{Binding BackgroundBrush}"
+                                                                BorderThickness="1"
+                                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                                CornerRadius="0" Margin="1,0"/>
+                                                        <Border Grid.Column="3" Background="{Binding BorderBrush}"
+                                                                CornerRadius="0,6,6,0" Margin="2,0,0,0"/>
+                                                    </Grid>
+                                                </Border>
 
                                                 <!-- Content -->
                                                 <Grid Grid.Row="1" Margin="14,12,14,0">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="*"/>
                                                         <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- Theme Name with active dot -->
+                                                    <!-- Theme Name -->
                                                     <StackPanel Grid.Row="0" Orientation="Horizontal"
-                                                                Margin="0,0,0,8">
-                                                        <Ellipse Width="8" Height="8"
-                                                                 Fill="{DynamicResource PrimaryBrush}"
-                                                                 Margin="0,0,6,0"
-                                                                 VerticalAlignment="Center"
-                                                                 Opacity="0">
-                                                            <Ellipse.Style>
-                                                                <Style TargetType="Ellipse">
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                            <Setter Property="Opacity" Value="1"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Ellipse.Style>
-                                                        </Ellipse>
+                                                                Margin="0,0,0,2">
                                                         <TextBlock Text="{Binding DisplayName}"
                                                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                                                    FontSize="15" FontWeight="Bold"
                                                                    VerticalAlignment="Center"/>
+                                                        <Border x:Name="activeTag"
+                                                                Background="{DynamicResource SuccessBrush}"
+                                                                CornerRadius="3"
+                                                                Padding="5,1"
+                                                                Margin="8,0,0,0"
+                                                                Visibility="Collapsed"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="Active"
+                                                                       Foreground="#0d1117"
+                                                                       FontSize="9" FontWeight="Bold"/>
+                                                        </Border>
                                                     </StackPanel>
 
+                                                    <!-- Description -->
+                                                    <TextBlock Grid.Row="1"
+                                                               Text="{Binding Description}"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               FontSize="11"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,0,0,8"
+                                                               LineHeight="16"/>
+
                                                     <!-- Color Swatches -->
-                                                    <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                                        <Border Width="34" Height="34" CornerRadius="6"
-                                                                Background="{Binding PrimaryBrush}"
-                                                                Margin="0,0,6,6"
-                                                                ToolTip="Primary"/>
-                                                        <Border Width="34" Height="34" CornerRadius="6"
-                                                                Background="{Binding SurfaceBrush}"
-                                                                BorderBrush="{DynamicResource BorderBrush}"
-                                                                BorderThickness="1"
-                                                                Margin="0,0,6,6"
-                                                                ToolTip="Surface"/>
-                                                        <Border Width="34" Height="34" CornerRadius="6"
-                                                                Background="{Binding BackgroundBrush}"
-                                                                BorderBrush="{DynamicResource BorderBrush}"
-                                                                BorderThickness="1"
-                                                                Margin="0,0,6,6"
-                                                                ToolTip="Background"/>
-                                                        <Border Width="34" Height="34" CornerRadius="6"
-                                                                Background="{Binding BorderBrush}"
-                                                                Margin="0,0,6,6"
-                                                                ToolTip="Border"/>
-                                                    </WrapPanel>
+                                                    <StackPanel Grid.Row="2" VerticalAlignment="Bottom"
+                                                                Margin="0,0,0,8">
+                                                        <TextBlock Text="Palette"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                   FontSize="9" FontWeight="SemiBold"
+                                                                   Margin="0,0,0,4"/>
+                                                        <WrapPanel Orientation="Horizontal">
+                                                            <Border Width="28" Height="28" CornerRadius="4"
+                                                                    Background="{Binding PrimaryBrush}"
+                                                                    Margin="0,0,4,4"
+                                                                    ToolTip="Primary accent"/>
+                                                            <Border Width="28" Height="28" CornerRadius="4"
+                                                                    Background="{Binding SurfaceBrush}"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    Margin="0,0,4,4"
+                                                                    ToolTip="Surface"/>
+                                                            <Border Width="28" Height="28" CornerRadius="4"
+                                                                    Background="{Binding BackgroundBrush}"
+                                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                                    BorderThickness="1"
+                                                                    Margin="0,0,4,4"
+                                                                    ToolTip="Background"/>
+                                                            <Border Width="28" Height="28" CornerRadius="4"
+                                                                    Background="{Binding BorderBrush}"
+                                                                    Margin="0,0,4,4"
+                                                                    ToolTip="Border"/>
+                                                        </WrapPanel>
+                                                    </StackPanel>
                                                 </Grid>
 
-                                                <!-- Active badge -->
+                                                <!-- Footer bar -->
                                                 <Border Grid.Row="2"
-                                                        Background="{DynamicResource PrimaryBrush}"
-                                                        CornerRadius="0,0,10,10"
-                                                        Padding="0,4"
-                                                        Height="22"
-                                                        Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock Text="✓ Active"
-                                                               Foreground="White"
-                                                               FontSize="11" FontWeight="Bold"
-                                                               HorizontalAlignment="Center"/>
-                                                </Border>
-
-                                                <!-- Inactive bottom bar -->
-                                                <Border Grid.Row="2"
-                                                        Background="{DynamicResource SurfaceLightBrush}"
-                                                        CornerRadius="0,0,10,10"
-                                                        Padding="0,4"
-                                                        Height="22"
-                                                        Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                                                        CornerRadius="0,0,12,12"
+                                                        Padding="0,5"
+                                                        Height="26">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
-                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Setter Property="Background" Value="{DynamicResource SurfaceLightBrush}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock Text="Click to apply"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}"
-                                                               FontSize="10"
-                                                               HorizontalAlignment="Center"/>
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               FontSize="10" FontWeight="SemiBold">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="Click to apply"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter Property="Text" Value="✓ Active"/>
+                                                                        <Setter Property="Foreground" Value="White"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </Border>
                                             </Grid>
                                         </Border>
@@ -1734,15 +1785,27 @@
 
                             <!-- Info Box -->
                             <Border Background="{DynamicResource SurfaceLightBrush}"
-                                    CornerRadius="6"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
                                     Padding="16,12"
-                                    Margin="0,8,0,0">
-                                <TextBlock TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontSize="12" LineHeight="20">
-                                        <Run Text="ℹ️"/>
-                                        <Run Text="  Themes are applied instantly. Your selection is saved and will be restored on next launch."/>
-                                </TextBlock>
+                                    Margin="0,4,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="20" Height="20" CornerRadius="5"
+                                            Background="{DynamicResource PrimaryBrush}"
+                                            VerticalAlignment="Top" Margin="0,0,10,0">
+                                        <TextBlock Text="i" Foreground="White"
+                                                   FontSize="12" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="12" LineHeight="20"
+                                               VerticalAlignment="Center">
+                                            <Run Text="Themes are applied instantly. Your selection is saved and restored on next launch."/>
+                                    </TextBlock>
+                                </StackPanel>
                             </Border>
 
                         </StackPanel>

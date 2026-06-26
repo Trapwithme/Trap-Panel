@@ -15,7 +15,10 @@ namespace WpfApp
             { "Nord", "Themes/Nord.xaml" },
             { "Dracula", "Themes/Dracula.xaml" },
             { "Solarized", "Themes/Solarized.xaml" },
-            { "Tokyo Night", "Themes/TokyoNight.xaml" }
+            { "Tokyo Night", "Themes/TokyoNight.xaml" },
+            { "Monokai", "Themes/Monokai.xaml" },
+            { "One Dark", "Themes/OneDark.xaml" },
+            { "Catppuccin", "Themes/Catppuccin.xaml" }
         };
 
         public static IReadOnlyDictionary<string, string> Themes => _themes;
