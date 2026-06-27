@@ -1981,18 +1981,29 @@ namespace WpfApp
                 string mac = "Unavailable";
                 string speed = "Unavailable";
 
-                // Find the active adapter that has a default gateway (the real internet-connected one)
                 var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
                     .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
                              && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                    .ToList();
+
+                // Collect all local IPv4 addresses from all active adapters
+                var allIps = adapters
+                    .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                    .Where(u => u.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    .Select(u => u.Address.ToString())
+                    .Distinct()
+                    .ToList();
+                localIp = allIps.Any() ? string.Join(", ", allIps) : "Unavailable";
+
+                // Pick the adapter with a default gateway for the rest of the fields
+                var ni = adapters
                     .OrderByDescending(n =>
                     {
                         var gw = n.GetIPProperties()?.GatewayAddresses;
                         return gw != null && gw.Any(g => g.Address?.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) ? 1 : 0;
                     })
-                    .ToList();
+                    .FirstOrDefault();
 
-                var ni = adapters.FirstOrDefault();
                 if (ni != null)
                 {
                     var ipProps = ni.GetIPProperties();
@@ -2000,10 +2011,7 @@ namespace WpfApp
                         .FirstOrDefault(u => u.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
 
                     if (unicast != null)
-                    {
-                        localIp = unicast.Address.ToString();
                         subnet = unicast.IPv4Mask?.ToString() ?? "N/A";
-                    }
 
                     var gw = ipProps.GatewayAddresses
                         .FirstOrDefault(g => g.Address?.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);

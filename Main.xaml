@@ -1269,38 +1269,13 @@
                                   Padding="0,0,4,0">
                         <StackPanel Margin="28,20,32,40">
 
-                            <!-- ===== Header ===== -->
-                            <Border Background="{DynamicResource SurfaceBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="10"
-                                    Padding="24,18"
-                                    Margin="0,0,0,20">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.15" Color="#000"/>
-                                </Border.Effect>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Width="4" Height="28"
-                                            Background="{DynamicResource PrimaryBrush}"
-                                            CornerRadius="2" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="🌐" FontSize="22" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="Network Info" FontSize="20" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                    <Button x:Name="networkRefreshButton" Grid.Column="2"
-                                            Content="⟳ Refresh"
-                                            Click="NetworkRefreshButton_Click"
-                                            Style="{StaticResource OutlineButton}"
-                                            Padding="18,8" FontSize="12"
-                                            VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
+                            <Button x:Name="networkRefreshButton"
+                                    Content="⟳ Refresh"
+                                    Click="NetworkRefreshButton_Click"
+                                    Style="{StaticResource OutlineButton}"
+                                    Padding="18,8" FontSize="12"
+                                    HorizontalAlignment="Right"
+                                    Margin="0,0,0,16"/>
 
                             <!-- ===== Public Identity Card ===== -->
                             <Border Background="{DynamicResource SurfaceBrush}"
