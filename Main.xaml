@@ -1637,8 +1637,8 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <PasswordBox x:Name="builderPasswordBox" Grid.Column="0" Padding="12,10" FontSize="13"
-                                                         MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
+                                            <TextBox x:Name="builderPasswordBox" Grid.Column="0" Padding="12,10" FontSize="13"
+                                                        MinHeight="36" VerticalContentAlignment="Center" HorizontalAlignment="Stretch"/>
                                         </Grid>
                                         <TextBlock Text="Minimum 12 characters · Used for authentication"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"

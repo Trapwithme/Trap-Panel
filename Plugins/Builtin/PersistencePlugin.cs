@@ -633,10 +633,10 @@ namespace ClientPlugin_persistence
     public class PersistenceClientRow : INotifyPropertyChanged
     {
         private string _state = "Waiting...";
-        private string _hkcu = "�";
-        private string _hklm = "�";
-        private string _startupFolder = "�";
-        private string _taskScheduler = "�";
+        private string _hkcu = "-";
+        private string _hklm = "-";
+        private string _startupFolder = "-";
+        private string _taskScheduler = "-";
         private string _lastResult = "";
         private bool _isSelected;
         private bool _isReady;
@@ -1129,7 +1129,7 @@ namespace ClientPlugin_persistence
                     string val = line.Substring(eq + 1).Trim();
 
                     bool installed = val.StartsWith("YES");
-                    string display = installed ? "?" : "?";
+                    string display = installed ? "✓" : "✗";
 
                     switch (key)
                     {

