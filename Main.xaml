@@ -1139,18 +1139,7 @@
                                     Margin="0,0,6,0"
                                     ToolTip="Enable / Disable selected tasks"/>
 
-                            <Button Grid.Column="3" Content="⚡ Mode"
-                                    Click="ToggleAutoTaskModeButton_Click"
-                                    Style="{StaticResource WarningButton}"
-                                    Margin="0,0,6,0"
-                                    ToolTip="Toggle selected tasks between In-Memory and Drop-to-Disk"/>
-
-                            <Button Grid.Column="4" Content="📋 View Log"
-                                    Click="ViewTaskLogButton_Click"
-                                    Style="{StaticResource OutlineButton}"
-                                    Margin="0,0,6,0"/>
-
-                            <Button Grid.Column="5" Content="🗑️ Remove"
+                            <Button Grid.Column="3" Content="🗑️ Remove"
                                     Click="RemoveAutoTaskButton_Click"
                                     Style="{StaticResource DangerButton}"/>
                         </Grid>
