@@ -1,8 +1,8 @@
 # Trap Panel
 
-**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 18 plugins, and C#/PowerShell stub deployment.**
+**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 18 plugins, and C#/PowerShell/VBS stub deployment.**
 
-Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell stub deployment.
+Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and C#, PowerShell, and VBS stub deployment.
 
 ## Screenshots
 
@@ -12,7 +12,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 
 - **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
 - **18 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, API hooks, countdown, auto-update
-- **C# + PowerShell agent generation** — Roslyn-compiled .NET executable or lightweight PowerShell script
+- **C# / PowerShell / VBS agent generation** — Roslyn-compiled .NET executable, lightweight PowerShell script, or obfuscated VBS launcher
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
@@ -54,14 +54,11 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Server IP / Hostname | Server address |
 | Port | TCP port for client connection |
 | Password | Authentication secret (minimum 12 characters) |
-| Encryption Key | AES-256 key for PBKDF2 — derives encryption and HMAC keys |
+| Encryption Key | AES-256-GCM key for TLS-like security (optional) |
 | Silent Mode | Run agent without console or visible window |
-| Install Name | Filename for the installed agent |
-| Install Directory | Target directory for agent installation |
-| Startup Method | Registry / Startup Folder / Scheduled Task |
-| Anti Debug | Enable debugger detection |
-| Process Guard | Enable competing process termination |
-| Output | Standalone .EXE (.NET 8) or .PS1 script |
+| Generate PS1 | Produce a lightweight PowerShell script agent |
+| Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload |
+| Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable |
 
 ## Transport Protocol
 
@@ -149,7 +146,7 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\TrapPanel.exe`.
 2. **Set password** — navigate to Settings, set a server password (minimum 12 characters)
 3. **Start listening** — click "Start Listening" to begin accepting client connections
 4. **Configure builder** — enter server IP, port, and password in the Builder tab
-5. **Generate agent** — click "Generate PS1" or "Compile EXE"
+5. **Generate agent** — click "Generate PS1", "Generate VBS", or "Compile EXE"
 6. **Deploy** — run the generated agent on the target machine
 7. **Manage** — connected clients appear in the Clients tab; right-click to launch plugins
 8. **Network info** — view public IP, local IPs, gateway, DNS, and adapter details in the Network tab
