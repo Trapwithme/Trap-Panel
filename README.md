@@ -91,23 +91,22 @@ Configure and generate deployment-ready agents from the Builder tab.
 
 ### Handshake Flow
 
-```
-  Client                                          Server
-    │                                                │
-    │══════ TCP Connect ══════════════════════════► │
-    │                                                │
-    │  ◄══ RSA-2048 public key ════════════════════ │
-    │                                                │
-    │  ═══ RSA-encrypted AES-256 key ════════════► │
-    │                                                │
-    │═══ AES-256-CBC + HMAC-SHA256 from now on ═══► │
-    │                                                │
-    │  ═══ MSG_AUTH (0x01) ── JSON ─══════════════► │
-    │  ◄══ MSG_AUTH_OK (0x81) / FAIL (0x82) ═══════ │
-    │                                                │
-    │══════════════ SESSION LOOP ══════════════════► │
-    │  Client → Heartbeat (5s), Active Window, Info  │
-    │  Server → Plugin Commands, File Transfers      │
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    C->>S: TCP Connect
+    S-->>C: RSA-2048 Public Key
+    C->>S: RSA-Encrypted AES-256 Key
+    Note over C,S: AES-256-CBC + HMAC-SHA256
+    C->>S: MSG_AUTH (0x01) — JSON
+    S-->>C: MSG_AUTH_OK (0x81) / MSG_AUTH_FAIL (0x82)
+    rect rgb(40, 40, 40)
+        Note over C,S: Session Loop
+        C-->>S: Heartbeat (5s), Active Window, Info
+        S-->>C: Plugin Commands, File Transfers
+    end
 ```
 
 ### Authentication Payload
