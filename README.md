@@ -92,23 +92,57 @@ Configure and generate deployment-ready agents from the Builder tab.
 ### Handshake Flow
 
 ```
-Client                                 Server
-  │                                        │
-  │── TCP Connect ──────────────────────► │
-  │                                        │
-  │── Handshake (RSA public key) ────────►│
-  │◄── HandshakeResponse (AES-256 + HMAC keys) ── │
-  │                                        │
-  │── Auth (JSON: password) ─────────────►│
-  │◄── AuthResponse (success/failure) ──── │
-  │                                        │
-  │═══ Bidirectional message loop ═══════►│
+CLIENT                                         SERVER
+  │                                               │
+  │══════════ TCP Connect ═══════════════════════►│
+  │                                               │
+  │    (raw TCP, no encryption)                   │
+  │                                               │
+  │  ◄══════ [4B: RSA pubkey length] ═══════════ │
+  │  ◄══════ [N bytes: RSA-2048 CSP blob] ══════ │
+  │                                               │
+  │  [Generate random 32B AES-256 key]            │
+  │  [Encrypt AES key with RSA PKCS#1 v1.5]       │
+  │                                               │
+  │  ══════ [4B: encrypted key length]════════►  │
+  │  ══════ [N bytes: RSA-encrypted AES key]══►  │
+  │                                               │
+  │  [Derive HMAC key:                             │  [RSA decrypt AES key]
+  │   SHA256("HMAC-" + hex(AES))]                  │  [Derive HMAC key:
+  │                                               │   SHA256("HMAC-" + hex(AES))]
+  │═══════════════════════════════════════════════│
+  │   All further messages use                    │
+  │   AES-256-CBC + HMAC-SHA256                  │
+  │═══════════════════════════════════════════════│
+  │                                               │
+  │  ══════ MSG_AUTH (0x01) ══════════════════►  │
+  │        JSON: {machine_id, info, password}      │
+  │                                               │
+  │  ◄══════ MSG_AUTH_OK (0x81)  ══════════════ │
+  │           or MSG_AUTH_FAIL (0x82)              │
+  │                                               │
+  │═══════════ SESSION LOOP ════════════════════► │
+  │                                               │
+  │  [Every 5s] MSG_HEARTBEAT (0x02) ══════════► │
+  │  ◄══ MSG_HEARTBEAT_ACK (0x83) ══════════════ │
+  │       [pendingCmds(4B)][fileFlag(1B)]          │
+  │                                               │
+  │  [Every 3s] MSG_ACTIVE_WINDOW ═════════════► │
+  │  [Every 60s] MSG_CLIENT_INFO ══════════════► │
+  │                                               │
+  │  ◄══ MSG_PLUGIN_CMD (0x90) ════════════════ │
+  │  ◄══ MSG_FILE_TRANSFER (0x91) ══════════════ │
+  │                                               │
+  │  ═══ MSG_PLUGIN_DATA (0x10) ════════════════►│
+  │  ═══ MSG_PLUGIN_BATCH (0x11) ══════════════►│
 ```
 
-Authentication JSON format:
+### Authentication Payload
+
 ```json
 {
-  "type": "auth",
+  "machine_id": "<SHA256 of CPU-ID-BIOS-Serial-Mainboard-Serial>",
+  "info": "<OS>|<ComputerName>|<Antivirus>|<Wallets>|<IsAdmin>|<HasWebcam>",
   "password": "supersecret"
 }
 ```
@@ -161,6 +195,22 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\LoaderKeyed.exe
 | Environment checks | Debugger detection, sandbox detection |
 | Protection | Userland API hooking via EasyHook (optional) |
 
-## License
+## Disclaimer & License
 
-This project is for educational and authorized security research purposes only. Unauthorized use of this software against systems you do not own or have explicit written permission to test is illegal. The authors assume no liability for misuse.
+**THIS SOFTWARE IS PROVIDED FOR EDUCATIONAL AND AUTHORIZED SECURITY RESEARCH PURPOSES ONLY.**
+
+By using, copying, or distributing this software, you acknowledge and agree that:
+
+- You **must not** use this software against any system, network, or device unless you are the owner or have obtained **explicit written permission** from the owner to perform security testing.
+- **Unauthorized access** to computer systems is illegal under the Computer Fraud and Abuse Act (CFAA) in the United States, the Computer Misuse Act in the United Kingdom, and similar laws in other jurisdictions. Violators may face **criminal prosecution** and **civil liability**.
+- The authors and contributors **assume no liability** for any misuse, damage, or legal consequences arising from the use of this software.
+- You are **solely responsible** for ensuring your use complies with all applicable local, state, national, and international laws and regulations.
+- This software **must not** be used in any malicious manner, including but not limited to: unauthorized surveillance, data theft, ransomware, denial of service, or any activity that disrupts or damages computer systems.
+- Security researchers and penetration testers should only use this software within the scope of **authorized engagements** with **formal written authorization**.
+- No warranty is provided — this software is distributed "AS IS" without any guarantees of fitness for a particular purpose.
+
+**If you are unsure whether you have legal authorization to test a system, do not proceed. When in doubt, obtain written permission first.**
+
+---
+
+*Trap Panel is a remote administration framework designed for legitimate system administration, educational purposes, and authorized security assessments. Any other use is strictly prohibited.*
