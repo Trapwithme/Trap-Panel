@@ -148,22 +148,6 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\LoaderKeyed.exe
 7. **Manage** — connected clients appear in the Clients tab; right-click to launch plugins
 8. **Network info** — view public IP, local IPs, gateway, DNS, and adapter details in the Network tab
 
-## Themes
-
-| Theme | Preview |
-|---|---|
-| Dark | Dark gray background, white text, blue accent |
-| Light | White background, black text, blue accent |
-| Midnight | Near-black background, teal accent |
-| Hacker | Black background, green terminal-style text |
-| Nord | Arctic blue palette, cyan and green accents |
-| Dracula | Dark purple background, pink and green accents |
-| Solarized | Dark brown background, yellow and blue accents |
-| Tokyo Night | Deep blue background, cyan and pink accents |
-| Monokai | Dark violet background, yellow and orange accents |
-| One Dark | Dark gray-blue background, blue and green accents |
-| Catppuccino | Muted brown background, pastel accents |
-
 ## Security
 
 | Measure | Detail |
