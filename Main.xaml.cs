@@ -2708,7 +2708,8 @@ namespace WpfApp
 
             SaveSettings();
 
-            string stubCode = GenerateStubCode(port, password, serverIp, encKey);
+            bool silentMode = builderSilentCheckBox?.IsChecked == true;
+            string stubCode = GenerateStubCode(port, password, serverIp, encKey, silentMode);
 
             if (stubCode.StartsWith("# Template"))
             {
@@ -2827,7 +2828,7 @@ namespace WpfApp
             return true;
         }
 
-        private string GenerateStubCode(string port, string password, string serverIp, string encryptionKey)
+        private string GenerateStubCode(string port, string password, string serverIp, string encryptionKey, bool silentMode = false)
         {
             string content;
 
@@ -2868,7 +2869,22 @@ namespace WpfApp
                 AppendLog("WARNING: Some placeholders were not replaced. Check template format.");
             }
 
+            if (silentMode)
+            {
+                AppendLog("Silent mode enabled — stripping comments and debug output from PowerShell stub.");
+                content = StripPowerShellDebug(content);
+            }
+
             return content;
+        }
+
+        private static string StripPowerShellDebug(string content)
+        {
+            content = Regex.Replace(content, @"<#[\s\S]*?#>", "");
+            content = Regex.Replace(content, @"(?m)^[ \t]*#.*$", "");
+            content = Regex.Replace(content, @"(?m)^[ \t]*Write-Host.*$", "");
+            content = Regex.Replace(content, @"(\r?\n){3,}", "$1$1");
+            return content.Trim();
         }
 
         private string LoadStubTemplate(string relativePath)
