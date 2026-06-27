@@ -1925,6 +1925,156 @@ namespace WpfApp
                 if (string.IsNullOrWhiteSpace(HttpPasswordBox.Password) && !string.IsNullOrWhiteSpace(builderPasswordBox.Password))
                     HttpPasswordBox.Password = builderPasswordBox.Password;
             }
+
+            if (e.AddedItems.Count > 0 && e.AddedItems[0] == networkTab)
+            {
+                _ = LoadNetworkInfoAsync();
+            }
+        }
+
+        // ==================== NETWORK TAB ====================
+
+        private async Task LoadNetworkInfoAsync()
+        {
+            try
+            {
+                networkRefreshButton.IsEnabled = false;
+
+                // Hostname
+                networkHostnameText.Text = Environment.MachineName;
+
+                // Public IP
+                _ = FetchPublicIpAsync();
+
+                // Local network info
+                LoadLocalNetworkInfo();
+            }
+            finally
+            {
+                networkRefreshButton.IsEnabled = true;
+            }
+        }
+
+        private async Task FetchPublicIpAsync()
+        {
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                string ip = await http.GetStringAsync("https://api.ipify.org");
+                networkPublicIpText.Text = ip?.Trim() ?? "Unavailable";
+            }
+            catch
+            {
+                networkPublicIpText.Text = "Unavailable";
+            }
+        }
+
+        private void LoadLocalNetworkInfo()
+        {
+            try
+            {
+                string localIp = "Unavailable";
+                string subnet = "Unavailable";
+                string gateway = "Unavailable";
+                string dns = "Unavailable";
+                string adapterName = "Unavailable";
+                string mac = "Unavailable";
+                string speed = "Unavailable";
+
+                // Find the active adapter that has a default gateway (the real internet-connected one)
+                var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
+                             && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                    .OrderByDescending(n =>
+                    {
+                        var gw = n.GetIPProperties()?.GatewayAddresses;
+                        return gw != null && gw.Any(g => g.Address?.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) ? 1 : 0;
+                    })
+                    .ToList();
+
+                var ni = adapters.FirstOrDefault();
+                if (ni != null)
+                {
+                    var ipProps = ni.GetIPProperties();
+                    var unicast = ipProps.UnicastAddresses
+                        .FirstOrDefault(u => u.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+
+                    if (unicast != null)
+                    {
+                        localIp = unicast.Address.ToString();
+                        subnet = unicast.IPv4Mask?.ToString() ?? "N/A";
+                    }
+
+                    var gw = ipProps.GatewayAddresses
+                        .FirstOrDefault(g => g.Address?.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                    gateway = gw?.Address?.ToString() ?? "None";
+
+                    var dnsList = ipProps.DnsAddresses
+                        .Where(d => d.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        .Select(d => d.ToString());
+                    dns = dnsList.Any() ? string.Join(", ", dnsList) : "None";
+
+                    adapterName = ni.Name;
+                    mac = ni.GetPhysicalAddress()?.ToString();
+                    if (!string.IsNullOrEmpty(mac) && mac.Length == 12)
+                        mac = string.Join(":", Enumerable.Range(0, 6).Select(i => mac.Substring(i * 2, 2)));
+
+                    speed = ni.Speed > 0 ? FormatSpeed(ni.Speed) : "Unknown";
+                }
+
+                networkLocalIpText.Text = localIp;
+                networkSubnetText.Text = subnet;
+                networkGatewayText.Text = gateway;
+                networkDnsText.Text = dns;
+                networkAdapterNameText.Text = adapterName;
+                networkMacText.Text = mac;
+                networkSpeedText.Text = speed;
+            }
+            catch
+            {
+                // Keep defaults
+            }
+        }
+
+        private static string FormatSpeed(long bps)
+        {
+            if (bps >= 1_000_000_000)
+                return $"{bps / 1_000_000_000.0:F1} Gbps";
+            if (bps >= 1_000_000)
+                return $"{bps / 1_000_000.0:F0} Mbps";
+            if (bps >= 1_000)
+                return $"{bps / 1_000.0:F0} Kbps";
+            return $"{bps} bps";
+        }
+
+        private void CopyField_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is string name)
+            {
+                var field = FindName(name) as TextBox;
+                if (field != null && !string.IsNullOrEmpty(field.Text))
+                {
+                    try
+                    {
+                        Clipboard.SetText(field.Text);
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        private async void NetworkRefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            networkPublicIpText.Text = "Loading...";
+            networkHostnameText.Text = "Loading...";
+            networkLocalIpText.Text = "Loading...";
+            networkSubnetText.Text = "Loading...";
+            networkGatewayText.Text = "Loading...";
+            networkDnsText.Text = "Loading...";
+            networkAdapterNameText.Text = "Loading...";
+            networkMacText.Text = "Loading...";
+            networkSpeedText.Text = "Loading...";
+            await LoadNetworkInfoAsync();
         }
 
         private void LoadThemeCards()

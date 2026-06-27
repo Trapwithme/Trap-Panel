@@ -1260,6 +1260,359 @@
                 </Grid>
             </TabItem>
 
+            <!-- ==================== NETWORK TAB ==================== -->
+            <TabItem Header="Network" x:Name="networkTab">
+                <Grid Background="{DynamicResource BackgroundBrush}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False"
+                                  Padding="0,0,4,0">
+                        <StackPanel Margin="28,20,32,40">
+
+                            <!-- ===== Header ===== -->
+                            <Border Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="24,18"
+                                    Margin="0,0,0,20">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.15" Color="#000"/>
+                                </Border.Effect>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="4" Height="28"
+                                            Background="{DynamicResource PrimaryBrush}"
+                                            CornerRadius="2" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="🌐" FontSize="22" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="Network Info" FontSize="20" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button x:Name="networkRefreshButton" Grid.Column="2"
+                                            Content="⟳ Refresh"
+                                            Click="NetworkRefreshButton_Click"
+                                            Style="{StaticResource OutlineButton}"
+                                            Padding="18,8" FontSize="12"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- ===== Public Identity Card ===== -->
+                            <Border Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Margin="0,0,0,20">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.12" Color="#000"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <Border Background="{DynamicResource SurfaceLightBrush}"
+                                            CornerRadius="10,10,0,0"
+                                            Padding="20,14"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="3" Height="18"
+                                                    Background="{DynamicResource PrimaryBrush}"
+                                                    CornerRadius="1.5" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="🌍" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Public Identity" FontWeight="SemiBold" FontSize="14"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <Grid Margin="24,20,24,20">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="16"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Public IPv4"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkPublicIpText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     Text="Loading..." FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkPublicIpText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Hostname"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkHostnameText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkHostnameText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ===== Local Network Card ===== -->
+                            <Border Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Margin="0,0,0,20">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.12" Color="#000"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <Border Background="{DynamicResource SurfaceLightBrush}"
+                                            CornerRadius="10,10,0,0"
+                                            Padding="20,14"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="3" Height="18"
+                                                    Background="{DynamicResource SuccessBrush}"
+                                                    CornerRadius="1.5" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="🏠" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Local Network" FontWeight="SemiBold" FontSize="14"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <Grid Margin="24,20,24,20">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="16"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="16"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="16"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Local IPv4"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkLocalIpText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkLocalIpText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Subnet Mask"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkSubnetText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkSubnetText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Default Gateway"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkGatewayText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkGatewayText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="DNS Servers"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkDnsText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkDnsText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ===== Active Adapter Card ===== -->
+                            <Border Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Margin="0,0,0,20">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.12" Color="#000"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <Border Background="{DynamicResource SurfaceLightBrush}"
+                                            CornerRadius="10,10,0,0"
+                                            Padding="20,14"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="3" Height="18"
+                                                    Background="{DynamicResource WarningBrush}"
+                                                    CornerRadius="1.5" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="🔌" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Active Adapter" FontWeight="SemiBold" FontSize="14"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <Grid Margin="24,20,24,20">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="16"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="16"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Adapter Name"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkAdapterNameText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkAdapterNameText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="MAC Address"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkMacText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkMacText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Link Speed"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="networkSpeedText" Grid.Column="1"
+                                                     Padding="10,8" FontSize="13" MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                                                     FontFamily="Consolas"
+                                                     Background="{DynamicResource SurfaceLightBrush}"
+                                                     BorderThickness="0"/>
+                                            <Button Grid.Column="2" Tag="networkSpeedText" Click="CopyField_Click"
+                                                    Style="{StaticResource OutlineButton}" Padding="6,4" FontSize="11"
+                                                    Content="Copy" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
             <!-- ==================== BUILDER TAB ==================== -->
             <TabItem Header="Builder" x:Name="builderTab">
                 <Grid Background="{DynamicResource BackgroundBrush}">
