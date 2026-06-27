@@ -2988,7 +2988,7 @@ namespace WpfApp
             builderOutputTextBox.Text = "Ready to generate stub...";
 
             string port = builderPortTextBox.Text.Trim();
-            string password = HttpPasswordBox.Password.Trim();
+            string password = builderPasswordBox.Text.Trim();
             string serverIp = builderIpTextBox.Text.Trim();
             string encKey = builderEncryptionKeyTextBox.Text.Trim();
 
@@ -3042,7 +3042,7 @@ namespace WpfApp
             builderOutputTextBox.Text = "Ready to generate stub...";
 
             string port = builderPortTextBox.Text.Trim();
-            string password = HttpPasswordBox.Password.Trim();
+            string password = builderPasswordBox.Text.Trim();
             string serverIp = builderIpTextBox.Text.Trim();
             string encKey = builderEncryptionKeyTextBox.Text.Trim();
 
@@ -3258,7 +3258,7 @@ namespace WpfApp
                 .Replace("{{SERVER_URL}}", $"{builderIpTextBox.Text.Trim()}:{builderPortTextBox.Text.Trim()}")
                 .Replace("{{CERTIFICATE}}", certBase64)
                 .Replace("{{SILENT_MODE}}", silentMode ? "true" : "false")
-                .Replace("{{PASSWORD}}", HttpPasswordBox.Password);
+                .Replace("{{PASSWORD}}", builderPasswordBox.Text);
 
             if (stubCode.Contains("{{SILENT_MODE}}"))
             {
@@ -3313,10 +3313,10 @@ namespace WpfApp
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(HttpPasswordBox.Password) || HttpPasswordBox.Password.Length < 12)
+            if (string.IsNullOrWhiteSpace(builderPasswordBox.Text) || builderPasswordBox.Text.Trim().Length < 12)
             {
-                AppendLog("ERROR: Server password must be at least 12 characters. Set it in Settings tab.");
-                BuilderOutput("ERROR: Server password must be at least 12 characters. Set it in Settings tab.");
+                AppendLog("ERROR: Server password must be at least 12 characters.");
+                BuilderOutput("ERROR: Server password must be at least 12 characters.");
                 return false;
             }
 
