@@ -92,49 +92,22 @@ Configure and generate deployment-ready agents from the Builder tab.
 ### Handshake Flow
 
 ```
-CLIENT                                         SERVER
-  │                                               │
-  │══════════ TCP Connect ═══════════════════════►│
-  │                                               │
-  │    (raw TCP, no encryption)                   │
-  │                                               │
-  │  ◄══════ [4B: RSA pubkey length] ═══════════ │
-  │  ◄══════ [N bytes: RSA-2048 CSP blob] ══════ │
-  │                                               │
-  │  [Generate random 32B AES-256 key]            │
-  │  [Encrypt AES key with RSA PKCS#1 v1.5]       │
-  │                                               │
-  │  ══════ [4B: encrypted key length]════════►  │
-  │  ══════ [N bytes: RSA-encrypted AES key]══►  │
-  │                                               │
-  │  [Derive HMAC key:                             │  [RSA decrypt AES key]
-  │   SHA256("HMAC-" + hex(AES))]                  │  [Derive HMAC key:
-  │                                               │   SHA256("HMAC-" + hex(AES))]
-  │═══════════════════════════════════════════════│
-  │   All further messages use                    │
-  │   AES-256-CBC + HMAC-SHA256                  │
-  │═══════════════════════════════════════════════│
-  │                                               │
-  │  ══════ MSG_AUTH (0x01) ══════════════════►  │
-  │        JSON: {machine_id, info, password}      │
-  │                                               │
-  │  ◄══════ MSG_AUTH_OK (0x81)  ══════════════ │
-  │           or MSG_AUTH_FAIL (0x82)              │
-  │                                               │
-  │═══════════ SESSION LOOP ════════════════════► │
-  │                                               │
-  │  [Every 5s] MSG_HEARTBEAT (0x02) ══════════► │
-  │  ◄══ MSG_HEARTBEAT_ACK (0x83) ══════════════ │
-  │       [pendingCmds(4B)][fileFlag(1B)]          │
-  │                                               │
-  │  [Every 3s] MSG_ACTIVE_WINDOW ═════════════► │
-  │  [Every 60s] MSG_CLIENT_INFO ══════════════► │
-  │                                               │
-  │  ◄══ MSG_PLUGIN_CMD (0x90) ════════════════ │
-  │  ◄══ MSG_FILE_TRANSFER (0x91) ══════════════ │
-  │                                               │
-  │  ═══ MSG_PLUGIN_DATA (0x10) ════════════════►│
-  │  ═══ MSG_PLUGIN_BATCH (0x11) ══════════════►│
+  Client                                          Server
+    │                                                │
+    │══════ TCP Connect ══════════════════════════► │
+    │                                                │
+    │  ◄══ RSA-2048 public key ════════════════════ │
+    │                                                │
+    │  ═══ RSA-encrypted AES-256 key ════════════► │
+    │                                                │
+    │═══ AES-256-CBC + HMAC-SHA256 from now on ═══► │
+    │                                                │
+    │  ═══ MSG_AUTH (0x01) ── JSON ─══════════════► │
+    │  ◄══ MSG_AUTH_OK (0x81) / FAIL (0x82) ═══════ │
+    │                                                │
+    │══════════════ SESSION LOOP ══════════════════► │
+    │  Client → Heartbeat (5s), Active Window, Info  │
+    │  Server → Plugin Commands, File Transfers      │
 ```
 
 ### Authentication Payload
