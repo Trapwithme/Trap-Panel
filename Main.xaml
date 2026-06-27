@@ -241,13 +241,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <Grid Grid.Row="0" Background="{DynamicResource SurfaceBrush}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" IsItemsHost="True" Margin="0"/>
-                                <Border Grid.Column="1" Background="Transparent" Padding="12,0,12,0" VerticalAlignment="Center">
+                            <DockPanel Background="{DynamicResource SurfaceBrush}" ClipToBounds="True">
+                                <Border DockPanel.Dock="Right" Background="Transparent" Padding="12,0,12,0" VerticalAlignment="Center" MaxWidth="280">
                                     <DockPanel>
                                         <TextBox x:Name="searchTextBox" MinWidth="100" VerticalAlignment="Center" Margin="0,0,6,0" DockPanel.Dock="Left"/>
                                         <Button x:Name="selectNoneButton" Content="☐" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Foreground="{DynamicResource TextSecondaryBrush}" Padding="8,5" Margin="0,0,6,0" ToolTip="Deselect all clients" FontSize="12" Cursor="Hand" DockPanel.Dock="Right"/>
@@ -259,7 +254,8 @@
                                         <Button x:Name="searchButton" Content="Search" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Foreground="{DynamicResource TextPrimaryBrush}" Padding="12,5" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12" DockPanel.Dock="Right"/>
                                     </DockPanel>
                                 </Border>
-                            </Grid>
+                                <StackPanel Orientation="Horizontal" IsItemsHost="True" Margin="0"/>
+                            </DockPanel>
                             <ContentPresenter Grid.Row="1" ContentSource="SelectedContent"
                                               Margin="{TemplateBinding Padding}"/>
                         </Grid>
@@ -2556,16 +2552,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="4" Background="{DynamicResource SurfaceLightBrush}"
-                        CornerRadius="4" Padding="10,4" Margin="0,0,12,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🎯 " FontSize="11" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="execModeStatusLbl" Text="Mode: Disk"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Column="5"/>
+                <Border Grid.Column="4"/>
 
                 <Border Grid.Column="6" Background="{DynamicResource SurfaceLightBrush}"
                         CornerRadius="4" Padding="10,4">

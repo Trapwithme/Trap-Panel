@@ -2821,9 +2821,6 @@ namespace WpfApp
                 var mode = GetSelectedExecutionMode();
                 bool inMemory = mode == ExecutionMode.InMemory;
 
-                if (execModeStatusLbl != null)
-                    execModeStatusLbl.Text = inMemory ? "🎯 Mode: In-Memory" : "🎯 Mode: Disk";
-
                 if (ctxDropToDisk != null)
                     ctxDropToDisk.IsChecked = !inMemory;
                 if (ctxInMemory != null)
