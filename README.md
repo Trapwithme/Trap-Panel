@@ -141,7 +141,7 @@ cd Trap-Panel
 dotnet build -c Release
 ```
 
-Run the generated executable from `bin\Release\net8.0-windows7.0\LoaderKeyed.exe`.
+Run the generated executable from `bin\Release\net8.0-windows7.0\TrapPanel.exe`.
 
 ## Usage
 
