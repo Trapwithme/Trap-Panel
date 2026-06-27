@@ -24,10 +24,17 @@
 
   <ItemGroup>
     <None Remove="PSStub_Direct.ps1" />
+    <None Remove="*.vbs" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="PSStub\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="VBSStub\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -1753,7 +1753,9 @@
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="12"/>
+                                                    <ColumnDefinition Width="8"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="8"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
                                                 <Button Grid.Column="0"
@@ -1765,9 +1767,17 @@
                                                         Padding="16,12"
                                                         FontSize="13"/>
                                                 <Button Grid.Column="2"
+                                                        x:Name="builderGenerateVbsButton"
+                                                        Content="Generate VBS"
+                                                        Click="GenerateVbsButton_Click"
+                                                        Style="{StaticResource OutlineButton}"
+                                                        HorizontalAlignment="Stretch"
+                                                        Padding="16,12"
+                                                        FontSize="13"/>
+                                                <Button Grid.Column="4"
                                                         Content="Compile EXE"
                                                         Click="CompileExeButton_Click"
-                                                        Style="{StaticResource PrimaryButton}"
+                                                        Style="{StaticResource OutlineButton}"
                                                         HorizontalAlignment="Stretch"
                                                         Padding="16,12"
                                                         FontSize="13"/>
