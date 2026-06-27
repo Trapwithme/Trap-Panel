@@ -1,8 +1,8 @@
 # Trap Panel
 
-**Modular remote administration framework with AES-256-CBC + HMAC encrypted TCP, 18 plugins, and C#/PowerShell agent deployment.**
+**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 18 plugins, and C#/PowerShell stub deployment.**
 
-Trap Panel is a remote administration framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell agent deployment. It provides a broad feature set ranging from system administration to security research.
+Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and both C# and PowerShell stub deployment.
 
 ## Screenshots
 
