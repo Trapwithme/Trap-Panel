@@ -13,6 +13,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 - **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
 - **18 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, API hooks, countdown, auto-update
 - **C# / PowerShell / VBS agent generation** — Roslyn-compiled .NET executable, lightweight PowerShell script, or obfuscated VBS launcher
+- **PS1 and VBS are currently undetected on Windows Defender** — silent and working perfectly
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
@@ -57,7 +58,7 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Encryption Key | AES-256-GCM key for TLS-like security (optional) |
 | Silent Mode | Run agent without console or visible window |
 | Generate PS1 | Produce a lightweight PowerShell script agent |
-| Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload |
+| Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload — multi-layer obfuscation: GZip → Base64 → chunked & reversed → Chr()-encoded strings → junk variables interleaved. Silent and undetected on Defender. |
 | Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable |
 
 ## Transport Protocol
