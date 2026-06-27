@@ -1265,14 +1265,6 @@
                                   Padding="0,0,4,0">
                         <StackPanel Margin="28,20,32,40">
 
-                            <Button x:Name="networkRefreshButton"
-                                    Content="⟳ Refresh"
-                                    Click="NetworkRefreshButton_Click"
-                                    Style="{StaticResource OutlineButton}"
-                                    Padding="18,8" FontSize="12"
-                                    HorizontalAlignment="Right"
-                                    Margin="0,0,0,16"/>
-
                             <!-- ===== Public Identity Card ===== -->
                             <Border Background="{DynamicResource SurfaceBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
@@ -1292,6 +1284,7 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Border Grid.Column="0" Width="3" Height="18"
                                                     Background="{DynamicResource PrimaryBrush}"
@@ -1301,6 +1294,12 @@
                                                 <TextBlock Text="Public Identity" FontWeight="SemiBold" FontSize="14"
                                                            Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                             </StackPanel>
+                                            <Button Grid.Column="2" x:Name="networkRefreshButton"
+                                                    Content="⟳ Refresh"
+                                                    Click="NetworkRefreshButton_Click"
+                                                    Style="{StaticResource OutlineButton}"
+                                                    Padding="18,8" FontSize="12"
+                                                    VerticalAlignment="Center"/>
                                         </Grid>
                                     </Border>
                                     <Grid Margin="24,20,24,20">
