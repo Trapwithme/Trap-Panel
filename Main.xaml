@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Trap Loader v1.1"
+        Title="Trap Loader v2.0"
         Height="700" Width="1136"
         MinHeight="600" MinWidth="900"
         ResizeMode="CanResize"
@@ -904,12 +904,11 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="⚡" FontSize="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Trap Loader" FontSize="18" FontWeight="Bold"
+                    <TextBlock Text="Trap Panel" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4"
                             Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.1" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                        <TextBlock Text="v2.0" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                             </Border>
                         </StackPanel>
 

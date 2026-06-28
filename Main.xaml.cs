@@ -23,6 +23,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DiscordRPC;
 using DiscordRPC.Message;
@@ -141,6 +142,8 @@ namespace WpfApp
 
             builderPortTextBox.Text = "443";
 
+            SetupBuilderPasswordBox();
+
             LoadSettings();
             LoadAutoTasks();
 
@@ -149,7 +152,6 @@ namespace WpfApp
 
             builderPasswordBox.TextChanged += (s, e) => SyncPwToServer();
             HttpPasswordBox.PasswordChanged += (s, e) => SyncPwToBuilder();
-            SetupBuilderPasswordBox();
             SetupPasswordReveal(HttpPasswordBox, ref _httpPwReveal, "httpPwReveal");
 
             AddAutoTaskRootkitMenuItems();
@@ -187,15 +189,14 @@ namespace WpfApp
                 Padding = pwBox.Padding,
                 FontSize = pwBox.FontSize,
                 MinHeight = pwBox.MinHeight,
-                VerticalContentAlignment = pwBox.VerticalContentAlignment,
+                VerticalContentAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = pwBox.HorizontalAlignment,
                 Visibility = Visibility.Collapsed,
                 BorderThickness = new Thickness(1),
                 Background = pwBox.Background,
                 Foreground = pwBox.Foreground,
                 BorderBrush = pwBox.BorderBrush,
-                CaretBrush = pwBox.Foreground,
-                Style = null
+                CaretBrush = pwBox.Foreground
             };
             revealRef = txtBox;
             Grid.SetColumn(txtBox, col);
@@ -410,7 +411,10 @@ namespace WpfApp
                                 builderIpTextBox.Text = settings.ServerIp;
 
                     if (!string.IsNullOrWhiteSpace(settings.Password))
+                    {
                         _builderActualPassword = settings.Password;
+                        builderPasswordBox.Text = new string('●', _builderActualPassword.Length);
+                    }
 
                     builderSilentCheckBox.IsChecked = settings.SilentMode;
 
@@ -1971,8 +1975,50 @@ namespace WpfApp
 
         // ==================== WINDOW EVENTS ====================
 
+        private static ImageSource GenerateTpLogo()
+        {
+            using var ms = new MemoryStream();
+            using var srcBmp = new System.Drawing.Bitmap(64, 64);
+            using (var g = System.Drawing.Graphics.FromImage(srcBmp))
+            {
+                g.Clear(System.Drawing.Color.Transparent);
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+
+                using var fnt = new System.Drawing.Font("Impact", 50, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Pixel);
+                var text = "TP";
+                var sz = g.MeasureString(text, fnt);
+                float x = (64 - sz.Width) / 2f;
+                float y = (64 - sz.Height) / 2f;
+
+                for (int dx = -2; dx <= 2; dx++)
+                    for (int dy = -2; dy <= 2; dy++)
+                        if (dx != 0 || dy != 0)
+                            g.DrawString(text, fnt, System.Drawing.Brushes.Black, x + dx, y + dy);
+
+                using var b = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(200, 100, 255));
+                g.DrawString(text, fnt, b, x, y);
+            }
+            srcBmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            ms.Position = 0;
+            var png = ms.ToArray();
+
+            using var ico = new MemoryStream();
+            using var w = new System.IO.BinaryWriter(ico);
+            w.Write((short)0); w.Write((short)1); w.Write((short)1);
+            w.Write((byte)64); w.Write((byte)64);
+            w.Write((byte)0); w.Write((byte)0);
+            w.Write((short)1); w.Write((short)32);
+            w.Write(png.Length); w.Write(22);
+            w.Write(png); w.Flush();
+            ico.Position = 0;
+            return BitmapFrame.Create(ico, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        }
+
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            Icon = GenerateTpLogo();
+
             WireToolbarEvents();
             tabControl.SelectedItem = clientsTab;
             UpdateConnectionIndicator(false);
@@ -3933,7 +3979,7 @@ namespace WpfApp
                 }
 
                 var clientGroup = new MenuItem { Header = "⚙️  Management" };
-                var clientPluginIds = new[] { "persistence", "update", "sysinfo" };
+                var clientPluginIds = new[] { "persistence", "update", "sysinfo", "resetsurvival" };
                 foreach (var id in clientPluginIds)
                 {
                     if (!loadedPlugins.TryGetValue(id, out var plugin)) continue;
@@ -4751,13 +4797,13 @@ namespace WpfApp
                 int count = ClientItems.Count;
                 _discordClient.SetPresence(new RichPresence
                 {
-                    Details = "Trap Loader v1.1",
+                    Details = "Trap Panel v2.0",
                     State = $"{count} client(s) connected",
                     Timestamps = new Timestamps { Start = _discordStartTime },
                     Assets = new Assets
                     {
                         LargeImageKey = "icon",
-                        LargeImageText = "Trap Loader"
+                        LargeImageText = "Trap Panel"
                     }
                 });
             }
@@ -4781,7 +4827,7 @@ namespace WpfApp
 
         private async void BtnTestTelegram_Click(object sender, RoutedEventArgs e)
         {
-            await SendTelegramNotification("Test notification from Trap Loader");
+            await SendTelegramNotification("Test notification from Trap Panel");
             AppendLog("Telegram test notification sent.");
         }
 

