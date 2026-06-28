@@ -13,7 +13,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 ## Features
 
 - **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
-- **20 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, fun, rootkit, API hooks, countdown, auto-update
+- **20 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, fun, kernel bypass, API hooks, countdown, auto-update
 - **C# / PowerShell / VBS / BAT agent generation** — Roslyn-compiled .NET executable, lightweight PowerShell script, obfuscated VBS launcher, or batch file embedding VBS
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
@@ -22,6 +22,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 - **Rate limiting & environment checks** — connection throttling, debugger and sandbox detection
 - **Certificate-based server identity** — auto-generated RSA 4096-bit self-signed certificate
 - **Network info tab** — view public IP, hostname, local IPs, subnet, gateway, DNS, and active adapter details
+- **URL obfuscation** — server address hidden in stubs via AES-256-CBC → GZip → Base64 → ROT13 → split into 3 separate parts
 
 ## Built-in Plugins
 
@@ -43,8 +44,8 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 | **Persistence** | Install startup persistence via Registry Run, Startup folder, Scheduled Task, WMI |
 | **System Info** | Gather comprehensive system, hardware, network, software, and service information |
 | **Fun** | Swap mouse, flip screen, open CD tray, toggle locks, message boxes, wallpaper |
-| **$tp Rootkit** | Deploy and manage rootkit persistence on the client |
-| **API Hooks (Reset Survival)** | Userland API hooking via EasyHook with modified registry and system file hardening |
+| **Kernel Bypass** | Deploy and manage low-level driver persistence on the client |
+| **API Hooks** | Userland API hooking via EasyHook with modified registry and system file hardening |
 | **Countdown** | AES-256-CBC file encryption with countdown timer |
 | **Update** | Download and replace client agent for self-updates |
 
@@ -63,7 +64,7 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload — GZip → Base64 → chunked & reversed → Chr()-encoded strings → junk interleaving |
 | Generate BAT | Produce a batch file embedding the VBS launcher — obfuscated via UTF-16 BOM, split cmd vars, junk interleave, payload chunked into env vars, PowerShell decodes and writes .vbs then runs silently via wscript.exe |
 | Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable |
-| URL Obfuscation | Server address hidden via multi-layer obfuscation: AES-256-CBC → GZip → Base64 → ROT13 → split into 3 parts |
+| URL Obfuscation | Server address hidden in generated stubs via AES-256-CBC → GZip → Base64 → ROT13 → split into 3 separate strings, reassembled at runtime |
 
 ## Transport Protocol
 
