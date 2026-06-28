@@ -165,8 +165,6 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\TrapPanel.exe`.
 | Payload | AES-256-CBC with HMAC-SHA256 (encrypt-then-MAC) |
 | Key derivation | PBKDF2 with 100,000 iterations (SHA-256) and 16-byte salt |
 | Authentication | Password validated via constant-time comparison over encrypted channel |
-| Rate limiting | 100 max concurrent connections, 5 per IP |
-| Auto-ban | 1-hour IP ban after 3 failed auth attempts |
 | Environment checks | Debugger detection, sandbox detection |
 | Protection | Userland API hooking via EasyHook (optional) |
 
