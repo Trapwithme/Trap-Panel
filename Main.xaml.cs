@@ -2101,7 +2101,7 @@ namespace WpfApp
             await _pluginManager.LoadAllPlugins();
 
             BuildClientContextMenu();
-            RefreshPluginCards();
+            UpdateActivePluginCount();
 
             AppendLog($"Plugin system initialized. {_pluginHost.LoadedPlugins.Count} plugin(s) loaded.");
 
@@ -4589,56 +4589,6 @@ namespace WpfApp
             }
         }
 
-        // ==================== PLUGIN TAB XAML HANDLERS ====================
-
-        private async void ReloadPluginsButton_Click(object sender, RoutedEventArgs e)
-        {
-            AppendLog("Reloading plugins...");
-            await _pluginManager.LoadAllPlugins();
-            BuildClientContextMenu();
-            RefreshPluginCards();
-            AppendLog($"Plugins reloaded. {_pluginHost.LoadedPlugins.Count} plugin(s) available.");
-        }
-
-        private void OpenPluginsFolderButton_Click(object sender, RoutedEventArgs e)
-        {
-            string pluginDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
-            if (!Directory.Exists(pluginDir))
-                Directory.CreateDirectory(pluginDir);
-
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = pluginDir,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"Failed to open plugins folder: {ex.Message}");
-            }
-        }
-
-        private void RefreshPluginCards()
-        {
-            Dispatcher.BeginInvoke(() =>
-            {
-                pluginCardsPanel.Children.Clear();
-
-                pluginCountLabel.Text =
-                    $"{_pluginHost.LoadedPlugins.Count} plugin(s) available. Right-click a client to launch.";
-
-                foreach (var kvp in _pluginHost.LoadedPlugins)
-                {
-                    var card = CreatePluginCard(kvp.Value);
-                    pluginCardsPanel.Children.Add(card);
-                }
-
-                UpdateActivePluginCount();
-            });
-        }
-
         public void UpdateActivePluginCount()
         {
             Dispatcher.BeginInvoke(() =>
@@ -4648,130 +4598,6 @@ namespace WpfApp
                 int count = _pluginWindows.Count;
                 activePluginCountLbl.Text = count == 1 ? "1 active" : $"{count} active";
             });
-        }
-
-        private Border CreatePluginCard(IServerPlugin plugin)
-        {
-            var card = new Border
-            {
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(16),
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            card.SetResourceReference(Border.BackgroundProperty, "SurfaceBrush");
-            card.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
-            card.BorderThickness = new Thickness(1);
-
-            var cardContent = new Grid();
-            cardContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            cardContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            var infoPanel = new StackPanel();
-
-            var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
-            nameRow.Children.Add(new TextBlock
-            {
-                Text = "🔌",
-                FontSize = 16,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            });
-
-            var nameText = new TextBlock
-            {
-                Text = plugin.DisplayName,
-                FontSize = 16,
-                FontWeight = FontWeights.SemiBold,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            nameText.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
-            nameRow.Children.Add(nameText);
-
-            var versionText = new TextBlock
-            {
-                Text = $"  v{plugin.Version}",
-                FontSize = 11,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            versionText.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-            nameRow.Children.Add(versionText);
-
-            if (plugin is IMultiClientPlugin)
-            {
-                var multiTag = new TextBlock
-                {
-                    Text = "  [Multi-Client]",
-                    FontSize = 10,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    FontStyle = FontStyles.Italic
-                };
-                multiTag.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
-                nameRow.Children.Add(multiTag);
-            }
-
-            infoPanel.Children.Add(nameRow);
-
-            var descText = new TextBlock
-            {
-                Text = plugin.Description,
-                FontSize = 12,
-                Margin = new Thickness(0, 4, 0, 4),
-                TextWrapping = TextWrapping.Wrap
-            };
-            descText.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-            infoPanel.Children.Add(descText);
-
-            string hasClientCode;
-            try
-            {
-                hasClientCode = string.IsNullOrEmpty(plugin.GetClientCode()) ? "None" : "Yes";
-            }
-            catch
-            {
-                hasClientCode = "Error";
-            }
-
-            var idText = new TextBlock
-            {
-                Text = $"ID: {plugin.PluginId}   |   Client code: {hasClientCode}",
-                FontSize = 11,
-                FontFamily = new FontFamily("Consolas")
-            };
-            idText.SetResourceReference(TextBlock.ForegroundProperty, "DisabledBrush");
-            infoPanel.Children.Add(idText);
-
-            Grid.SetColumn(infoPanel, 0);
-            cardContent.Children.Add(infoPanel);
-
-            var launchButton = new Button
-            {
-                Content = "▶ Launch",
-                Padding = new Thickness(16, 8, 16, 8),
-                Cursor = Cursors.Hand,
-                VerticalAlignment = VerticalAlignment.Center,
-                FontSize = 12,
-                FontWeight = FontWeights.SemiBold,
-                ToolTip = "Launch for selected client(s)",
-                Style = (Style)FindResource("PrimaryButton")
-            };
-
-            string capturedPluginId = plugin.PluginId;
-            launchButton.Click += async (s, args) =>
-            {
-                await LaunchPluginForSelectedClients(capturedPluginId);
-            };
-
-            Grid.SetColumn(launchButton, 1);
-            cardContent.Children.Add(launchButton);
-
-            card.Child = cardContent;
-
-            card.MouseEnter += (s, ev) =>
-                card.SetResourceReference(Border.BorderBrushProperty, "PrimaryBrush");
-            card.MouseLeave += (s, ev) =>
-                card.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
-
-            return card;
         }
 
         // ==================== LOG SYSTEM (BATCHED + CAPPED) ====================

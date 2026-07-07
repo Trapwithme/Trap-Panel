@@ -1182,68 +1182,6 @@
                 </Grid>
             </TabItem>
 
-            <!-- ==================== PLUGINS TAB ==================== -->
-            <TabItem Header="Plugins" x:Name="pluginsTab">
-                <Grid Background="{DynamicResource BackgroundBrush}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel x:Name="pluginListPanel" Margin="16">
-
-                            <TextBlock Text="Loaded Plugins"
-                                       FontSize="20" FontWeight="Bold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       Margin="0,0,0,4"/>
-                            <TextBlock x:Name="pluginCountLabel"
-                                       Text="0 plugin(s) available. Right-click a client to launch."
-                                       FontSize="13"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       Margin="0,0,0,16"/>
-
-                            <StackPanel x:Name="pluginCardsPanel"/>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                <Button x:Name="reloadPluginsButton"
-                                        Content="🔄  Reload Plugins"
-                                        Click="ReloadPluginsButton_Click"
-                                        Style="{StaticResource OutlineButton}"
-                                        Margin="0,0,8,0"/>
-                                <Button x:Name="openPluginsFolderButton"
-                                        Content="📂  Open Plugins Folder"
-                                        Click="OpenPluginsFolderButton_Click"
-                                        Style="{StaticResource OutlineButton}"/>
-                            </StackPanel>
-
-                            <Border Background="{DynamicResource SurfaceLightBrush}"
-                                    CornerRadius="6"
-                                    Padding="16,12"
-                                    Margin="0,16,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="How to add plugins"
-                                               FontWeight="SemiBold" FontSize="13"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                               Margin="0,0,0,6"/>
-                                    <TextBlock TextWrapping="Wrap"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextSecondaryBrush}"
-                                               LineHeight="20">
-                                        <Run Text="1. Create a class library (.dll) implementing"/>
-                                        <Run Text="IServerPlugin" FontFamily="Consolas" Foreground="{DynamicResource PrimaryBrush}"/>
-                                        <LineBreak/>
-                                        <Run Text="2. Drop the .dll into the"/>
-                                        <Run Text="Plugins/" FontFamily="Consolas" Foreground="{DynamicResource PrimaryBrush}"/>
-                                        <Run Text="folder next to the application"/>
-                                        <LineBreak/>
-                                        <Run Text="3. Click 'Reload Plugins' or restart the application"/>
-                                        <LineBreak/>
-                                        <Run Text="4. Right-click a connected client to launch your plugin"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Grid>
-            </TabItem>
-
             <!-- ==================== NETWORK TAB ==================== -->
             <TabItem Header="Network" x:Name="networkTab">
                 <Grid Background="{DynamicResource BackgroundBrush}">
