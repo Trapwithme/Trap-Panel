@@ -4,9 +4,13 @@
 
 Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and C#, PowerShell, VBS, and BAT stub deployment.
 
-[![Release](https://img.shields.io/badge/Download-Latest_Release-blue?style=for-the-badge&logo=github)](https://github.com/Trapwithme/Trap-Panel/releases/tag/Release)
+<p align="center">
+  <a href="https://github.com/Trapwithme/Trap-Panel/releases/tag/Release"><img src="https://img.shields.io/badge/Download-Latest_Release-1f6feb?style=for-the-badge&logo=github" alt="Release"/></a>
+</p>
 
-[![Telegram](https://img.shields.io/badge/Join_Telegram_Group-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/bypchat)
+> [!IMPORTANT]
+> **💬  Join our Telegram Group** → [**t.me/bypchat**](https://t.me/bypchat)  
+> Support, updates, discussions & community
 
 ## Screenshots
 
