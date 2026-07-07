@@ -397,7 +397,7 @@ namespace ClientPlugin_fun
 
             _statusLabel = new TextBlock
             {
-                Text = $"{TruncateId(context.ClientId)} — Waiting for client...",
+                Text = $"{TruncateId(context.ClientId)} - Waiting for client...",
                 Foreground = TextSecondaryBrush,
                 VerticalAlignment = VerticalAlignment.Center,
                 FontSize = 12
@@ -677,7 +677,7 @@ namespace ClientPlugin_fun
             {
                 _clientReady = true;
                 SetButtonsEnabled(true);
-                _statusLabel.Text = $"{TruncateId(_context.ClientId)} — Ready";
+                _statusLabel.Text = $"{TruncateId(_context.ClientId)} - Ready";
                 _statusLabel.Foreground = new SolidColorBrush(SuccessColorVal);
                 AppendLog("Client plugin ready. All controls enabled.");
             });
@@ -707,7 +707,7 @@ namespace ClientPlugin_fun
             {
                 _clientReady = false;
                 SetButtonsEnabled(false);
-                _statusLabel.Text = $"{TruncateId(_context.ClientId)} — Disconnected";
+                _statusLabel.Text = $"{TruncateId(_context.ClientId)} - Disconnected";
                 _statusLabel.Foreground = new SolidColorBrush(DangerColorVal);
                 AppendLog("Client disconnected.");
             });
@@ -756,7 +756,7 @@ namespace ClientPlugin_fun
         private static string TruncateId(string id)
         {
             if (string.IsNullOrEmpty(id)) return "";
-            return id.Length <= 16 ? id : id.Substring(0, 16) + "…";
+            return id.Length <= 16 ? id : id.Substring(0, 16) + "...";
         }
 
         private TextBox CreateThemedTextBox()

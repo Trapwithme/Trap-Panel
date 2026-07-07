@@ -122,7 +122,7 @@ namespace WpfApp.Plugins.Builtin
             }
         }
 
-        // Standard single-client CreateUI � returns existing shared UI or creates it
+        // Standard single-client CreateUI - returns existing shared UI or creates it
         public UserControl CreateUI(PluginContext context)
         {
             return CreateSharedUI();
@@ -642,7 +642,7 @@ namespace ClientPlugin_persistence
         private bool _isReady;
 
         public string ClientId { get; }
-        public string ShortId => ClientId.Length > 16 ? ClientId.Substring(0, 16) + "�" : ClientId;
+        public string ShortId => ClientId.Length > 16 ? ClientId.Substring(0, 16) + "..." : ClientId;
 
         public string State { get => _state; set { _state = value; Notify(nameof(State)); } }
         public string HKCU { get => _hkcu; set { _hkcu = value; Notify(nameof(HKCU)); } }
@@ -1089,7 +1089,7 @@ namespace ClientPlugin_persistence
                 var row = GetOrAddRow(clientId);
                 string op = GetOpName(opcode);
                 row.LastResult = $"? {op}: {error}";
-                AppendLog($"{Shorten(clientId)}: {op} FAILED � {error}");
+                AppendLog($"{Shorten(clientId)}: {op} FAILED - {error}");
             });
         }
 
@@ -1190,7 +1190,7 @@ namespace ClientPlugin_persistence
             });
         }
 
-        private static string Shorten(string id) => id.Length > 12 ? id.Substring(0, 12) + "�" : id;
+        private static string Shorten(string id) => id.Length > 12 ? id.Substring(0, 12) + "..." : id;
 
         private static string GetOpName(byte op)
         {

@@ -1269,34 +1269,5 @@ namespace WpfApp.Plugins.Builtin
         }
     }
 
-    [SupportedOSPlatform("windows")]
-    public class ToggleSwitch : Border
-    {
-        private bool _isOn;
-        private readonly Border _thumb, _track;
-        public event Action<bool> Toggled;
-        public bool IsOn { get => _isOn; set { _isOn = value; Upd(); } }
 
-        public ToggleSwitch(string label)
-        {
-            Margin = new Thickness(4, 2, 4, 2); Cursor = Cursors.Hand;
-            Background = new SolidColorBrush(Tc("SurfaceLightColor"));
-            CornerRadius = new CornerRadius(5); Padding = new Thickness(10, 4, 10, 4);
-            BorderBrush = new SolidColorBrush(Tc("BorderColor")); BorderThickness = new Thickness(1);
-            var p = new StackPanel { Orientation = Orientation.Horizontal };
-            p.Children.Add(new TextBlock { Text = label, Foreground = new SolidColorBrush(Tc("TextPrimaryColor")), FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
-            _track = new Border { Width = 36, Height = 18, CornerRadius = new CornerRadius(9), Background = new SolidColorBrush(Tc("ButtonBgColor")), VerticalAlignment = VerticalAlignment.Center };
-            _thumb = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(7), Background = new SolidColorBrush(Tc("TextPrimaryColor")), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(2, 0, 0, 0) };
-            _track.Child = _thumb; p.Children.Add(_track); Child = p;
-            MouseLeftButtonDown += (s, e) => { _isOn = !_isOn; Upd(); Toggled?.Invoke(_isOn); };
-            Upd();
-        }
-
-        void Upd()
-        {
-            if (_isOn) { _thumb.HorizontalAlignment = HorizontalAlignment.Right; _thumb.Margin = new Thickness(0, 0, 2, 0); _track.Background = new SolidColorBrush(Tc("SuccessColor")); }
-            else { _thumb.HorizontalAlignment = HorizontalAlignment.Left; _thumb.Margin = new Thickness(2, 0, 0, 0); _track.Background = new SolidColorBrush(Tc("ButtonBgColor")); }
-        }
-        private static Color Tc(string key) => (Color)Application.Current.Resources[key];
-    }
 }

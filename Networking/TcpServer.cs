@@ -33,7 +33,7 @@ namespace WpfApp
         private PluginHost _pluginHost;
         private volatile bool _isRunning;
 
-        // Indexed by machineId (raw ID from client handshake) � this is the ONLY key
+        // Indexed by machineId (raw ID from client handshake) - this is the ONLY key
         private readonly ConcurrentDictionary<string, ClientConnection> _clients = new();
 
         // File queue: always indexed by raw machineId
@@ -267,7 +267,7 @@ namespace WpfApp
                 await connLock.WaitAsync(ct);
                 try
                 {
-                    // Remove old connection if exists � do NOT fire disconnect for replacement
+                    // Remove old connection if exists - do NOT fire disconnect for replacement
                     if (_clients.TryRemove(machineId, out var oldConn))
                     {
                         _ui.AppendVerboseLog($"Replacing connection for {machineId}");
@@ -640,7 +640,7 @@ namespace WpfApp
 
         /// <summary>
         /// Handles MSG_CLIENT_INFO received during message loop.
-        /// This is an UPDATE � the initial info was already reported during handshake.
+        /// This is an UPDATE - the initial info was already reported during handshake.
         /// We only forward it if this connection is still the active one,
         /// and we suppress it if the handshake info hasn't been processed yet.
         /// </summary>
@@ -653,7 +653,7 @@ namespace WpfApp
                 current.ConnectionId != conn.ConnectionId)
                 return;
 
-            // Only allow updates � the initial report is handled in HandleClientConnection
+            // Only allow updates - the initial report is handled in HandleClientConnection
             // If for some reason initial info wasn't reported yet, skip this to avoid races
             if (!_initialInfoReported.ContainsKey(conn.MachineId))
                 return;

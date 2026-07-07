@@ -278,7 +278,7 @@ namespace ClientPlugin_update
 
             _statusLabel = new TextBlock
             {
-                Text = $"Update � {TruncateId(context.ClientId)} � Waiting for client...",
+                Text = $"Update - {TruncateId(context.ClientId)} - Waiting for client...",
                 Foreground = TextSecondaryBrush,
                 VerticalAlignment = VerticalAlignment.Center,
                 FontSize = 12
@@ -306,7 +306,7 @@ namespace ClientPlugin_update
             _updateButton.Margin = new Thickness(6, 0, 0, 0);
             DockPanel.SetDock(_updateButton, Dock.Right);
 
-            _browseButton = CreateThemedButton("Browse�", SurfaceLightColor, C("ButtonBgHoverColor"));
+            _browseButton = CreateThemedButton("Browse...", SurfaceLightColor, C("ButtonBgHoverColor"));
             _browseButton.Click += BrowseButton_Click;
             _browseButton.Margin = new Thickness(6, 0, 0, 0);
             DockPanel.SetDock(_browseButton, Dock.Right);
@@ -416,7 +416,7 @@ namespace ClientPlugin_update
         private static string TruncateId(string id)
         {
             if (string.IsNullOrEmpty(id)) return "";
-            return id.Length <= 16 ? id : id.Substring(0, 16) + "�";
+            return id.Length <= 16 ? id : id.Substring(0, 16) + "...";
         }
 
         public void OnClientReady()
@@ -424,7 +424,7 @@ namespace ClientPlugin_update
             Dispatcher.BeginInvoke(() =>
             {
                 _clientReady = true;
-                _statusLabel.Text = $"Update � {TruncateId(_context.ClientId)} � Ready";
+                _statusLabel.Text = $"Update - {TruncateId(_context.ClientId)} - Ready";
                 _statusLabel.Foreground = new SolidColorBrush(SuccessColor);
                 UpdateButtonState();
                 AppendLog("[Client plugin ready. Select an executable and click 'Update'.]\n", SuccessColor);
@@ -500,12 +500,12 @@ namespace ClientPlugin_update
 
                 if (busy)
                 {
-                    _statusLabel.Text = $"Update � {TruncateId(_context.ClientId)} � Sending...";
+                    _statusLabel.Text = $"Update - {TruncateId(_context.ClientId)} - Sending...";
                     _statusLabel.Foreground = new SolidColorBrush(C("WarningColor"));
                 }
                 else if (_clientReady)
                 {
-                    _statusLabel.Text = $"Update � {TruncateId(_context.ClientId)} � Ready";
+                    _statusLabel.Text = $"Update - {TruncateId(_context.ClientId)} - Ready";
                     _statusLabel.Foreground = new SolidColorBrush(SuccessColor);
                 }
             });

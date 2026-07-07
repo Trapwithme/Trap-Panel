@@ -31,7 +31,7 @@ namespace WpfApp.Plugins.Builtin
         public string PluginId => "botkiller";
         public string DisplayName => "Bot Killer";
         public string Version => "4.0.0";
-        public string Description => "Automated malware detection and removal with multi-client batch control. Self-aware � will never kill its own process chain.";
+        public string Description => "Automated malware detection and removal with multi-client batch control. Self-aware - will never kill its own process chain.";
 
         private const byte OP_START_SCAN = 0x01;
         private const byte OP_KILL_PROCESS = 0x02;
@@ -73,7 +73,7 @@ namespace WpfApp.Plugins.Builtin
         public Task Initialize(PluginHost host)
         {
             _host = host;
-            _host.Log("[BOTKILLER] Plugin initialized v4.0 � self-aware multi-client");
+            _host.Log("[BOTKILLER] Plugin initialized v4.0 - self-aware multi-client");
             return Task.CompletedTask;
         }
 
@@ -2354,7 +2354,7 @@ namespace ClientPlugin_botkiller
         {
             get
             {
-                if (FileSize <= 0) return "�";
+                if (FileSize <= 0) return "?";
                 if (FileSize < 1024) return FileSize + " B";
                 if (FileSize < 1048576) return (FileSize / 1024.0).ToString("F1") + " KB";
                 return (FileSize / 1048576.0).ToString("F1") + " MB";
@@ -2377,7 +2377,7 @@ namespace ClientPlugin_botkiller
         {
             get
             {
-                if (Memory <= 0) return "�";
+                if (Memory <= 0) return "?";
                 if (Memory < 1048576) return (Memory / 1024.0).ToString("F0") + " KB";
                 return (Memory / 1048576.0).ToString("F1") + " MB";
             }
@@ -3167,7 +3167,7 @@ namespace ClientPlugin_botkiller
                     {
                         int cc = cn.Select(x => x.ClientId).Distinct().Count();
                         var cnRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(16, 1, 0, 0) };
-                        cnRow.Children.Add(Txt("� " + cn.Key + " (" + cc + " clients)", 10, OrangeColor, FontWeights.Normal));
+                        cnRow.Children.Add(Txt("* " + cn.Key + " (" + cc + " clients)", 10, OrangeColor, FontWeights.Normal));
                         var nukeBtn = MakeThemedButton("Nuke All", DangerRed, DangerRedHover);
                         var entries = cn.ToList();
                         nukeBtn.Click += (s, e) =>
@@ -3188,7 +3188,7 @@ namespace ClientPlugin_botkiller
                 if (selected.Count > 1)
                 {
                     var hdr = new Border { Background = new SolidColorBrush(SurfaceLightColor), CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 4, 0, 2) };
-                    hdr.Child = Txt(Trunc(group.Key, 24) + " � " + group.Count() + " threat(s)", 11, AccentBlue, FontWeights.SemiBold);
+                    hdr.Child = Txt(Trunc(group.Key, 24) + " - " + group.Count() + " threat(s)", 11, AccentBlue, FontWeights.SemiBold);
                     _threatListPanel.Children.Add(hdr);
                 }
                 foreach (var t in group.OrderByDescending(x => x.ThreatLevel))
@@ -3320,7 +3320,7 @@ namespace ClientPlugin_botkiller
             foreach (var r in t.Reasons)
             {
                 var rr = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(3, 1, 0, 0) };
-                rr.Children.Add(Txt("�", 11, WarningYellow, FontWeights.Normal));
+                rr.Children.Add(Txt("*", 11, WarningYellow, FontWeights.Normal));
                 rr.Children.Add(Spc(4));
                 rr.Children.Add(Txt(r, 11, WarningYellow, FontWeights.Normal));
                 _detailContent.Children.Add(rr);
@@ -3393,7 +3393,7 @@ namespace ClientPlugin_botkiller
                 foreach (var mt in allMatching)
                 {
                     var cr = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 1, 0, 0) };
-                    cr.Children.Add(Txt("�", 10, TextSecondary, FontWeights.Normal));
+                    cr.Children.Add(Txt("*", 10, TextSecondary, FontWeights.Normal));
                     cr.Children.Add(Spc(4));
                     cr.Children.Add(Txt(Trunc(mt.ClientId, 16), 10, AccentBlue, FontWeights.Normal));
                     if (mt.ProcessId > 0) { cr.Children.Add(Spc(4)); cr.Children.Add(Txt("PID " + mt.ProcessId, 10, TextSecondary, FontWeights.Normal)); }
@@ -3456,7 +3456,7 @@ namespace ClientPlugin_botkiller
                     var ghInfo = new StackPanel { Orientation = Orientation.Horizontal };
                     ghInfo.Children.Add(Txt(gn, 11, AccentBlue, FontWeights.SemiBold));
                     ghInfo.Children.Add(Spc(6));
-                    ghInfo.Children.Add(Txt("�" + group.Count() + " on " + clientCount + " client(s)", 10, TextSecondary, FontWeights.Normal));
+                    ghInfo.Children.Add(Txt("*" + group.Count() + " on " + clientCount + " client(s)", 10, TextSecondary, FontWeights.Normal));
                     ghRow.Children.Add(ghInfo);
                     gh.Child = ghRow;
                     _processListPanel.Children.Add(gh);
@@ -3513,7 +3513,7 @@ namespace ClientPlugin_botkiller
                     var ghInfo = new StackPanel { Orientation = Orientation.Horizontal };
                     ghInfo.Children.Add(Txt(gn, 11, AccentBlue, FontWeights.SemiBold));
                     ghInfo.Children.Add(Spc(6));
-                    ghInfo.Children.Add(Txt("�" + group.Count() + " on " + clientCount + " client(s)", 10, TextSecondary, FontWeights.Normal));
+                    ghInfo.Children.Add(Txt("*" + group.Count() + " on " + clientCount + " client(s)", 10, TextSecondary, FontWeights.Normal));
                     ghRow.Children.Add(ghInfo);
                     gh.Child = ghRow;
                     _startupListPanel.Children.Add(gh);
@@ -3592,7 +3592,7 @@ namespace ClientPlugin_botkiller
                     var ghInfo = new StackPanel { Orientation = Orientation.Horizontal };
                     ghInfo.Children.Add(Txt(group.Key, 11, AccentBlue, FontWeights.SemiBold));
                     ghInfo.Children.Add(Spc(6));
-                    ghInfo.Children.Add(Txt("�" + group.Count() + " on " + clientCount + " client(s)", 10, TextSecondary, FontWeights.Normal));
+                    ghInfo.Children.Add(Txt("*" + group.Count() + " on " + clientCount + " client(s)", 10, TextSecondary, FontWeights.Normal));
                     ghRow.Children.Add(ghInfo);
                     gh.Child = ghRow;
                     _serviceListPanel.Children.Add(gh);
