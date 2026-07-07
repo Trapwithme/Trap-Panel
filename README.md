@@ -6,6 +6,8 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 
 [![Release](https://img.shields.io/badge/Download-Latest_Release-blue?style=for-the-badge&logo=github)](https://github.com/Trapwithme/Trap-Panel/releases/tag/Release)
 
+[![Telegram](https://img.shields.io/badge/Join_Telegram_Group-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/bypchat)
+
 ## Screenshots
 
 <img src="screenshots/panelss.png" width="320"/> <img src="screenshots/panelss2.png" width="320"/> <img src="screenshots/panelss3.png" width="320"/>
