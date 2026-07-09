@@ -9,6 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>True</UseWPF>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -24,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="CSharpStub\Stub.cs" />
+    <Compile Remove="StubBuilder\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="PSStub_Direct.ps1" />
     <None Remove="*.vbs" />
   </ItemGroup>
@@ -35,7 +41,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="CSharpStub\Stub.cs" />
+    <Compile Remove="StubObfuscatorLib\**\*.cs" />
+    <Compile Include="StubObfuscatorLib\StubObfuscator.cs" />
   </ItemGroup>
 
   <ItemGroup>

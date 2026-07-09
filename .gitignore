@@ -48,6 +48,8 @@ obj/
 
 ## Runtime
 server_settings.json
-
 release.zip
 AGENTS.md
+papers/
+r77_src/
+r77_bin/

