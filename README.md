@@ -20,7 +20,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 
 - **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
 - **20 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, fun, kernel bypass, API hooks, countdown, auto-update
-- **C# / PowerShell / VBS / BAT agent generation** — Roslyn-compiled .NET executable, lightweight PowerShell script, obfuscated VBS launcher, or batch file embedding VBS
+- **C# / PowerShell / VBS / BAT agent generation** — Roslyn-compiled .NET executable with polymorphic obfuscation, lightweight PowerShell script, obfuscated VBS launcher, or batch file embedding VBS
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
@@ -29,6 +29,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 - **Certificate-based server identity** — auto-generated RSA 4096-bit self-signed certificate
 - **Network info tab** — view public IP, hostname, local IPs, subnet, gateway, DNS, and active adapter details
 - **URL obfuscation** — server address hidden in stubs via AES-256-CBC → GZip → Base64 → ROT13 → split into 3 separate parts
+- **Polymorphic stub obfuscation** — each build produces a unique binary via algorithm polymorphism (XOR/AES/byte-reversal), encrypted strings, dynamic API resolution, junk byte interleaving, class/field/method renaming, opaque predicates, dead code, and anti-debug traps
 
 ## Built-in Plugins
 
@@ -69,7 +70,7 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Generate PS1 | Produce a lightweight PowerShell script agent |
 | Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload — GZip → Base64 → chunked & reversed → Chr()-encoded strings → junk interleaving |
 | Generate BAT | Produce a batch file embedding the VBS launcher — obfuscated via UTF-16 BOM, split cmd vars, junk interleave, payload chunked into env vars, PowerShell decodes and writes .vbs then runs silently via wscript.exe |
-| Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable |
+| Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable with polymorphic obfuscation — unique binary per build |
 | URL Obfuscation | Server address hidden in generated stubs via AES-256-CBC → GZip → Base64 → ROT13 → split into 3 separate strings, reassembled at runtime |
 
 ## Transport Protocol
@@ -134,7 +135,7 @@ sequenceDiagram
 |---|---|
 | **Panel OS** | Windows 7 or later |
 | **Panel Runtime** | .NET 8 Runtime |
-| **Panel Dependencies** | NuGet: DiscordRichPresence, Microsoft.CodeAnalysis.CSharp 5.0, Newtonsoft.Json 13.0, System.Management 8.0 |
+| **Panel Dependencies** | NuGet: DiscordRichPresence, Microsoft.CodeAnalysis.CSharp 5.0, Microsoft.Win32.Registry 5.0, Newtonsoft.Json 13.0, System.Drawing.Common 8.0, System.Management 8.0 |
 | **Client OS** | Windows 7 or later |
 | **Client Runtime** | .NET Framework 4.8 or .NET 8 |
 | **Client Privileges** | User or Administrator (Admin required for remote desktop, API hooks) |
@@ -173,6 +174,7 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\TrapPanel.exe`.
 | Authentication | Password validated via constant-time comparison over encrypted channel |
 | Environment checks | Debugger detection, sandbox detection |
 | Protection | Userland API hooking via EasyHook (optional) |
+| Stub obfuscation | Dynamic API resolution (35+ functions resolved at runtime), algorithm polymorphism (XOR/AES/byte-reversal), encrypted strings with junk byte interleaving, class/field/method renaming, opaque predicates, dead code injection, anti-debug traps, generation counter |
 
 ## Disclaimer & License
 
