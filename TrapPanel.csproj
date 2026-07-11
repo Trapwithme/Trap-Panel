@@ -28,6 +28,7 @@
     <Compile Remove="CSharpStub\Stub.cs" />
     <Compile Remove="StubBuilder\**\*.cs" />
     <Compile Remove="TestPSObf\**\*.cs" />
+    <Compile Remove="debug\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
