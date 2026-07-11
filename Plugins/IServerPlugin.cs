@@ -34,4 +34,14 @@ namespace WpfApp.Plugins
         void RemoveAllClients();
         List<string> GetManagedClientIds();
     }
+
+    /// <summary>
+    /// Implement alongside IServerPlugin for plugins that perform a single action immediately when
+    /// launched and do NOT open a UI window (e.g. uninstall, shutdown). The <see cref="Execute"/>
+    /// method is invoked once per client with no window presented to the operator.
+    /// </summary>
+    public interface IOneClickPlugin
+    {
+        Task Execute(PluginContext context);
+    }
 }

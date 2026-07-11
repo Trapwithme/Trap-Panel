@@ -27,6 +27,7 @@
   <ItemGroup>
     <Compile Remove="CSharpStub\Stub.cs" />
     <Compile Remove="StubBuilder\**\*.cs" />
+    <Compile Remove="TestPSObf\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,6 +44,7 @@
   <ItemGroup>
     <Compile Remove="StubObfuscatorLib\**\*.cs" />
     <Compile Include="StubObfuscatorLib\StubObfuscator.cs" />
+    <Compile Include="StubObfuscatorLib\PSStubObfuscator.cs" />
   </ItemGroup>
 
   <ItemGroup>

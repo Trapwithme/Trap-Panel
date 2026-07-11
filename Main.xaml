@@ -1512,8 +1512,6 @@
             <!-- ==================== BUILDER TAB ==================== -->
             <TabItem Header="Builder" x:Name="builderTab">
                 <Grid Background="{DynamicResource BackgroundBrush}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
                         <Grid Margin="24,16,24,24">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -1762,7 +1760,6 @@
                                                 BorderBrush="{DynamicResource BorderBrush}"
                                                 BorderThickness="1">
                                             <TextBox x:Name="builderOutputTextBox"
-                                                     MinHeight="100"
                                                      IsReadOnly="True"
                                                      TextWrapping="Wrap"
                                                      VerticalScrollBarVisibility="Auto"
@@ -1774,13 +1771,13 @@
                                                      Padding="12,10"
                                                      Style="{x:Null}"
                                                      CaretBrush="White"
-                                                     Text="Ready to generate stub..."/>
+                                                     Text="Ready to generate stub..."
+                                                     PreviewMouseDown="BuilderOutputTextBox_PreviewMouseDown"/>
                                         </Border>
                                     </Grid>
                                 </Border>
                             </Grid>
                         </Grid>
-                    </ScrollViewer>
                 </Grid>
             </TabItem>
 

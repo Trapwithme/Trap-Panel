@@ -84,6 +84,12 @@ namespace WpfApp.Plugins
             if (!_host.LoadedPlugins.ContainsKey("resetsurvival"))
                 await _host.LoadPlugin(new ResetSurvivalPlugin());
 
+            if (!_host.LoadedPlugins.ContainsKey("uninstall"))
+                await _host.LoadPlugin(new UninstallPlugin());
+
+            if (!_host.LoadedPlugins.ContainsKey("shutdown"))
+                await _host.LoadPlugin(new ShutdownPlugin());
+
             await LoadExternalPlugins();
         }
 
