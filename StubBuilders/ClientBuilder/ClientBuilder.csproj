@@ -7,6 +7,6 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\StubObfuscatorLib\StubObfuscatorLib.csproj" />
+    <ProjectReference Include="..\..\StubObfuscatorLib\StubObfuscatorLib.csproj" />
   </ItemGroup>
 </Project>

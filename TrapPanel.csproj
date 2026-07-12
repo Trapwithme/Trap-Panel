@@ -26,9 +26,10 @@
 
   <ItemGroup>
     <Compile Remove="CSharpStub\Stub.cs" />
-    <Compile Remove="StubBuilder\**\*.cs" />
+    <Compile Remove="StubBuilders\ClientBuilder\**\*.cs" />
     <Compile Remove="TestPSObf\**\*.cs" />
     <Compile Remove="debug\**\*.cs" />
+    <Compile Remove="LnkTest\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
