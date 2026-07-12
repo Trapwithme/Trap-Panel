@@ -1,8 +1,8 @@
 # Trap Panel
 
-**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 20 plugins, and C#/PowerShell/VBS/BAT stub deployment.**
+**Modular C2 framework with AES-256-CBC + HMAC encrypted TCP, 20 plugins, and C#/PowerShell/VBS/BAT/HTA/LNK stub deployment.**
 
-Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and C#, PowerShell, VBS, and BAT stub deployment.
+Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypted TCP communications via AES-256-CBC + HMAC-SHA256, a plugin-based architecture for real-time bidirectional control, and C#, PowerShell, VBS, BAT, HTA, and LNK stub deployment.
 
 <p align="center">
   <a href="https://github.com/Trapwithme/Trap-Panel/releases/tag/Release"><img src="https://img.shields.io/badge/Download-Latest_Release-1f6feb?style=for-the-badge&logo=github" alt="Release"/></a>
@@ -20,7 +20,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 
 - **AES-256-CBC + HMAC encrypted transport** — encrypt-then-MAC protocol with per-message random IV
 - **20 built-in plugins** — shell, file manager, registry, screen monitor, keystroke monitor, webcam, microphone, remote desktop, SOCKS5 proxy, crypto miner, wallet finder, process guard, persistence, system info, process monitor, fun, kernel bypass, API hooks, countdown, auto-update
-- **C# / PowerShell / VBS / BAT agent generation** — Roslyn-compiled .NET executable with polymorphic obfuscation, lightweight PowerShell script, obfuscated VBS launcher, or batch file embedding VBS
+- **C# / PowerShell / VBS / BAT / HTA / LNK agent generation** — Roslyn-compiled .NET executable with polymorphic obfuscation, lightweight PowerShell script (also polymorphic), obfuscated VBS launcher, batch file embedding VBS, HTA application with XOR-encrypted payload, or LNK shortcut with custom icon
 - **Plugin-based architecture** — modular IServerPlugin interface with per-client session routing
 - **Real-time push model** — event-driven command delivery within milliseconds of queuing
 - **Auto Tasks engine** — schedule automated plugin execution on client connect
@@ -29,7 +29,7 @@ Trap Panel is a modular C2 framework coded in C# (.NET 8, WPF) featuring encrypt
 - **Certificate-based server identity** — auto-generated RSA 4096-bit self-signed certificate
 - **Network info tab** — view public IP, hostname, local IPs, subnet, gateway, DNS, and active adapter details
 - **URL obfuscation** — server address hidden in stubs via AES-256-CBC → GZip → Base64 → ROT13 → split into 3 separate parts
-- **Polymorphic stub obfuscation** — each build produces a unique binary via algorithm polymorphism (XOR/AES/byte-reversal), encrypted strings, dynamic API resolution, junk byte interleaving, class/field/method renaming, opaque predicates, dead code, and anti-debug traps
+- **Polymorphic stub obfuscation** — each build produces a unique binary or script. C# stubs use algorithm polymorphism (XOR/AES/byte-reversal), encrypted strings, dynamic API resolution, junk byte interleaving, class/field/method renaming, opaque predicates, dead code, and anti-debug traps. PS1 stubs use encrypted strings, randomized identifiers, and junk code injection.
 
 ## Built-in Plugins
 
@@ -67,9 +67,12 @@ Configure and generate deployment-ready agents from the Builder tab.
 | Password | Authentication secret (minimum 12 characters) |
 | Encryption Key | AES-256-CBC key for server identity (optional, replaces cert-based exchange) |
 | Silent Mode | Run agent without console or visible window |
-| Generate PS1 | Produce a lightweight PowerShell script agent |
+| Generate PS1 | Produce a lightweight PowerShell script agent with polymorphic obfuscation (encrypted strings, randomized identifiers, junk code) |
 | Generate VBS | Produce an obfuscated VBS launcher wrapping the compressed PS1 payload — GZip → Base64 → chunked & reversed → Chr()-encoded strings → junk interleaving |
 | Generate BAT | Produce a batch file embedding the VBS launcher — obfuscated via UTF-16 BOM, split cmd vars, junk interleave, payload chunked into env vars, PowerShell decodes and writes .vbs then runs silently via wscript.exe |
+| Generate HTA | Produce an HTML Application disguised as "Windows Security Advisory" — PS1 payload XOR-encrypted with random key, decrypted via JavaScript with randomized variable names, written to temp file and executed via PowerShell |
+| Generate LNK | Produce a Windows shortcut (.lnk) file — PS1 payload embedded as a PowerShell -Command argument, executed silently via HTA launcher |
+| LNK Icon | Pick from 5 standard Windows icons (Folder, Document, Text, Picture, Settings) — uses `imageres.dll` / `shell32.dll` so icons resolve on any machine |
 | Compile EXE | Roslyn-compile a standalone .NET Framework 4.7.2 executable with polymorphic obfuscation — unique binary per build |
 | URL Obfuscation | Server address hidden in generated stubs via AES-256-CBC → GZip → Base64 → ROT13 → split into 3 separate strings, reassembled at runtime |
 
@@ -159,7 +162,7 @@ Run the generated executable from `bin\Release\net8.0-windows7.0\TrapPanel.exe`.
 2. **Set password** — navigate to Settings, set a server password (minimum 12 characters)
 3. **Start listening** — click "Start Listening" to begin accepting client connections
 4. **Configure builder** — enter server IP, port, and password in the Builder tab
-5. **Generate agent** — click "Generate PS1", "Generate VBS", "Generate BAT" (silent VBS-in-BAT), or "Compile EXE"
+5. **Generate agent** — click "Generate PS1", "Generate VBS", "Generate BAT" (silent VBS-in-BAT), "Generate HTA", "Generate LNK", or "Compile EXE"
 6. **Deploy** — run the generated agent on the target machine
 7. **Manage** — connected clients appear in the Clients tab; right-click to launch plugins
 8. **Network info** — view public IP, local IPs, gateway, DNS, and adapter details in the Network tab
